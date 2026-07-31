@@ -24,13 +24,13 @@ class Settings(BaseSettings):
 
     # Configuración de Workers
     RUN_WORKERS: bool = True
-    WORKER_COUNT: int = 5
+    WORKER_COUNT: int = 2
     WORKER_POLL_INTERVAL: int = 5  # segundos
     TASK_TIMEOUT: int = 3600  # segundos (1 hora)
 
     # Configuración de tareas
     MAX_QUEUE_SIZE: int = 100
-    MAX_CONCURRENT_TASKS: int = 5
+    MAX_CONCURRENT_TASKS: int = 2
     DEFAULT_MAX_RETRIES: int = 3
     DEFAULT_RETRY_DELAY: int = 60  # segundos
 

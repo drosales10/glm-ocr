@@ -5,7 +5,8 @@ const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
 // Crear instancia de axios
 const api = axios.create({
 	baseURL: BASE_URL,
-	timeout: 60000 // Timeout de 60 segundos
+	// OCR local puede tardar varios minutos (layout + regiones)
+	timeout: 600000
 })
 
 // Interceptor de peticiones
@@ -74,6 +75,7 @@ export interface TaskStatusData {
 	document_id: string
 	status: TaskStatus
 	progress?: number
+	current_step?: string | null
 	current_stage?: string | null
 	created_at: string
 	started_at?: string

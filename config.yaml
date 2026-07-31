@@ -1,6 +1,6 @@
-# GLM-OCR — Ollama (self-hosted, despliegue local)
-# Uso: glmocr parse imagen.png --config config.yaml
-#      python -m glmocr.server --config config.yaml
+# GLM-OCR — Ollama en GPU (recomendado en esta máquina)
+# Confirmado: glm-ocr corre al 100% GPU vía Ollama.
+# Alternativa vLLM (más throughput): scripts/start-vllm.ps1 + api_port 8080
 
 server:
   host: "0.0.0.0"
@@ -17,14 +17,15 @@ pipeline:
     api_path: /api/generate
     model: glm-ocr:latest
     api_mode: ollama_generate
-    request_timeout: 300
+    request_timeout: 600
 
-  max_workers: 4
+  # Concurrencia baja: evita saturar VRAM de 8 GB
+  max_workers: 2
 
-  # Detección de layout local (requerido en modo self-hosted)
   layout:
     model_dir: PaddlePaddle/PP-DocLayoutV3_safetensors
-    device: cpu
+    # CUDA acelera el layout; si hay OOM, cambia a cpu
+    device: cuda
     batch_size: 1
     label_task_mapping:
       text:

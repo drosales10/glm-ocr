@@ -122,10 +122,19 @@ export function OCRResults({ result, fileName }: OCRResultsProps) {
 						{/* Estado de procesamiento */}
 						{status === 'pending' || status === 'processing' ? (
 							<div className='h-full flex items-center justify-center'>
-								<div className='text-center'>
+								<div className='text-center max-w-sm px-4'>
 									<div className='inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4'></div>
 									<p className='text-gray-500 dark:text-gray-400'>
 										Procesando...
+										{typeof response?.progress === 'number' ? ` ${Math.round(response.progress)}%` : ''}
+									</p>
+									{(response?.current_step || response?.current_stage) && (
+										<p className='text-xs text-gray-400 mt-2'>
+											{response.current_step || response.current_stage}
+										</p>
+									)}
+									<p className='text-xs text-gray-400 mt-3'>
+										Una página densa puede tardar 1–5 minutos (layout + OCR por región).
 									</p>
 								</div>
 							</div>

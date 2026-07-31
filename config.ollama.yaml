@@ -1,0 +1,58 @@
+# GLM-OCR — Ollama (GPU vía Ollama, sin vLLM)
+# Uso: ollama serve  +  python -m glmocr.server --config config.ollama.yaml
+
+server:
+  host: "0.0.0.0"
+  port: 5002
+  debug: false
+
+pipeline:
+  maas:
+    enabled: false
+
+  ocr_api:
+    api_host: localhost
+    api_port: 11434
+    api_path: /api/generate
+    model: glm-ocr:latest
+    api_mode: ollama_generate
+    request_timeout: 600
+
+  max_workers: 2
+
+  layout:
+    model_dir: PaddlePaddle/PP-DocLayoutV3_safetensors
+    # Si sobra VRAM tras cargar Ollama, cambia a: cuda
+    device: cpu
+    batch_size: 1
+    label_task_mapping:
+      text:
+        - abstract
+        - algorithm
+        - content
+        - doc_title
+        - figure_title
+        - paragraph_title
+        - reference_content
+        - text
+        - vertical_text
+        - vision_footnote
+        - seal
+        - formula_number
+      table:
+        - table
+      formula:
+        - display_formula
+        - inline_formula
+      skip:
+        - chart
+        - image
+      abandon:
+        - header
+        - footer
+        - number
+        - footnote
+        - aside_text
+        - reference
+        - footer_image
+        - header_image

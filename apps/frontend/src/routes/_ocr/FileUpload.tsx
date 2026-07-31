@@ -34,6 +34,8 @@ interface QueueItem {
 	file: UploadedFile
 	status: QueueStatus
 	error?: string | null
+	progress?: number
+	currentStep?: string | null
 }
 
 interface FileUploadProps {
@@ -93,11 +95,25 @@ export function FileUpload({ onFileUploaded, onTaskStatusChange }: FileUploadPro
 	)
 	const progress = queue.length === 0 ? 0 : ((completedCount + failedCount) / queue.length) * 100
 
-	const updateQueueItem = (fileId: string, status: QueueStatus, error?: string | null) => {
+	const updateQueueItem = (
+		fileId: string,
+		status: QueueStatus,
+		error?: string | null,
+		progress?: number,
+		currentStep?: string | null
+	) => {
 		if (!mountedRef.current) return
 		setQueue(items =>
 			items.map(item =>
-				item.file.id === fileId ? { ...item, status, error: error ?? item.error } : item
+				item.file.id === fileId
+					? {
+							...item,
+							status,
+							error: error ?? item.error,
+							progress: progress ?? item.progress,
+							currentStep: currentStep ?? item.currentStep
+						}
+					: item
 			)
 		)
 	}
@@ -106,7 +122,8 @@ export function FileUpload({ onFileUploaded, onTaskStatusChange }: FileUploadPro
 		while (mountedRef.current) {
 			try {
 				const response = await getTaskStatus(taskId)
-				updateQueueItem(fileId, response.status, response.error_message)
+				const step = response.current_step ?? response.current_stage ?? null
+				updateQueueItem(fileId, response.status, response.error_message, response.progress, step)
 				onTaskStatusChange?.({
 					fileId,
 					status: response.status,
@@ -264,8 +281,27 @@ export function FileUpload({ onFileUploaded, onTaskStatusChange }: FileUploadPro
 								<div className='flex items-center gap-2 min-w-0'>
 									{item.status === 'completed' ? <CheckCircle2 className='size-4 text-green-600 shrink-0' /> : item.status === 'failed' ? <XCircle className='size-4 text-red-600 shrink-0' /> : <Loader2 className='size-4 text-primary shrink-0 animate-spin' />}
 									<span className='truncate flex-1' title={item.file.name}>{item.file.name}</span>
-									<span className='text-gray-500 shrink-0'>{statusLabel[item.status]}</span>
+									<span className='text-gray-500 shrink-0'>
+										{item.status === 'processing' && typeof item.progress === 'number'
+											? `${Math.round(item.progress)}%`
+											: statusLabel[item.status]}
+									</span>
 								</div>
+								{(item.status === 'processing' || item.status === 'pending') && (
+									<>
+										<div className='mt-1.5 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden'>
+											<div
+												className='h-full bg-primary transition-all'
+												style={{ width: `${Math.min(100, Math.max(0, item.progress ?? 5))}%` }}
+											/>
+										</div>
+										{item.currentStep && (
+											<p className='text-gray-500 mt-1 truncate' title={item.currentStep}>
+												{item.currentStep}
+											</p>
+										)}
+									</>
+								)}
 								{item.error && <p className='text-red-500 mt-1 break-words'>{item.error}</p>}
 							</div>
 						))}

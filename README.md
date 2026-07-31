@@ -1,303 +1,294 @@
 ## GLM-OCR
 
-[中文阅读](README_zh.md)
+[English](https://github.com/zai-org/GLM-OCR/blob/main/README.md) · [中文](README_zh.md)
 
 <div align="center">
 <img src=resources/logo.svg width="40%"/>
 </div>
 <p align="center">
-    👋 Join our <a href="resources/WECHAT.md" target="_blank">WeChat</a> and <a href="https://discord.gg/QR7SARHRxK" target="_blank">Discord</a> community
+    👋 Únete a la comunidad en <a href="resources/WECHAT.md" target="_blank">WeChat</a> y <a href="https://discord.gg/QR7SARHRxK" target="_blank">Discord</a>
     <br>
-    📖 Check out the GLM-OCR <a href="https://arxiv.org/abs/2603.10910" target="_blank">technical report</a>
+    📖 Informe técnico de GLM-OCR: <a href="https://arxiv.org/abs/2603.10910" target="_blank">arXiv</a>
     <br>
-    📍 Use GLM-OCR's <a href="https://docs.z.ai/guides/vlm/glm-ocr" target="_blank">API</a>
+    📍 API oficial: <a href="https://docs.z.ai/guides/vlm/glm-ocr" target="_blank">docs.z.ai</a>
 </p>
 
-### Model Introduction
+### Introducción del modelo
 
-GLM-OCR is a multimodal OCR model for complex document understanding, built on the GLM-V encoder–decoder architecture. It introduces Multi-Token Prediction (MTP) loss and stable full-task reinforcement learning to improve training efficiency, recognition accuracy, and generalization. The model integrates the CogViT visual encoder pre-trained on large-scale image–text data, a lightweight cross-modal connector with efficient token downsampling, and a GLM-0.5B language decoder. Combined with a two-stage pipeline of layout analysis and parallel recognition based on PP-DocLayout-V3, GLM-OCR delivers robust and high-quality OCR performance across diverse document layouts.
+GLM-OCR es un modelo OCR multimodal para comprensión de documentos complejos, basado en la arquitectura encoder–decoder GLM-V. Incorpora pérdida Multi-Token Prediction (MTP) y aprendizaje por refuerzo estable multi-tarea para mejorar eficiencia de entrenamiento, precisión y generalización. Integra el encoder visual CogViT, un conector cross-modal ligero con downsampling de tokens, y un decodificador de lenguaje GLM-0.5B. Combinado con el pipeline de dos etapas (análisis de layout + reconocimiento paralelo) basado en PP-DocLayout-V3, ofrece OCR robusto en layouts diversos.
 
-**Key Features**
+**Características principales**
 
-- **State-of-the-Art Performance**: Achieves a score of 94.62 on OmniDocBench V1.5, ranking #1 overall, and delivers state-of-the-art results across major document understanding benchmarks, including formula recognition, table recognition, and information extraction.
+- **Rendimiento de referencia**: 94.62 en OmniDocBench V1.5 (#1 global); resultados SOTA en fórmulas, tablas y extracción de información.
+- **Orientado a escenarios reales**: tablas complejas, documentos con código, sellos y layouts difíciles.
+- **Inferencia eficiente**: ~0.9B parámetros; despliegue con vLLM, SGLang y Ollama.
+- **Fácil de usar**: SDK open source, CLI y toolchain completa.
 
-- **Optimized for Real-World Scenarios**: Designed and optimized for practical business use cases, maintaining robust performance on complex tables, code-heavy documents, seals, and other challenging real-world layouts.
+### Noticias
 
-- **Efficient Inference**: With only 0.9B parameters, GLM-OCR supports deployment via vLLM, SGLang, and Ollama, significantly reducing inference latency and compute cost, making it ideal for high-concurrency services and edge deployments.
+- **[2026.3.12]** SDK con modo Skill para agentes — `pip install glmocr` + API key. Ver: [GLM-OCR Skill](skills/glmocr/SKILL.md)
+- **[2026.3.12]** Informe técnico disponible: [arXiv](https://arxiv.org/abs/2603.10910)
+- **[2026.2.12]** Guía de fine-tuning con LLaMA-Factory: [examples/finetune](examples/finetune/README.md)
 
-- **Easy to Use**: Fully open-sourced and equipped with a comprehensive [SDK](https://github.com/zai-org/GLM-OCR) and inference toolchain, offering simple installation, one-line invocation, and smooth integration into existing production pipelines.
+### Descargar el modelo
 
-### News & Updates
-
-- **[2026.3.12]** GLM-OCR SDK now supports agent-friendly Skill mode — just `pip install glmocr` + set API key, ready to use via CLI or Python with no GPU or YAML config needed. See: [GLM-OCR Skill](skills/glmocr/SKILL.md)
-- **[2026.3.12]** GLM-OCR Technical Report is now available. See: [GLM-OCR Technical Report](https://arxiv.org/abs/2603.10910)
-- **[2026.2.12]** Fine-tuning tutorial based on LLaMA-Factory is now available. See: [GLM-OCR Fine-tuning Guide](examples/finetune/README.md)
-
-### Download Model
-
-| Model   | Download Links                                                                                                              | Precision |
+| Modelo  | Enlaces                                                                                                                     | Precisión |
 | ------- | --------------------------------------------------------------------------------------------------------------------------- | --------- |
 | GLM-OCR | [🤗 Hugging Face](https://huggingface.co/zai-org/GLM-OCR)<br> [🤖 ModelScope](https://modelscope.cn/models/ZhipuAI/GLM-OCR) | BF16      |
 
-## GLM-OCR SDK
+---
 
-We provide an SDK for using GLM-OCR more efficiently and conveniently.
+## Mejoras de este repositorio (despliegue local)
 
-### Install SDK
+Este fork/adaptación está orientado a **despliegue 100 % local** (sin depender de la nube MaaS). Incluye:
 
-Choose the lightest installation that matches your scenario:
+| Mejora | Descripción |
+| ------ | ----------- |
+| **UI en español** | Frontend y mensajes del backend traducidos al español (incl. modo oscuro). |
+| **Cola de carga múltiple** | Subida de varios archivos/carpeta con hasta 3 concurrentes y barra de progreso por archivo. |
+| **Progreso de tarea** | Muestra `%` y paso actual (`current_step`) durante el OCR. |
+| **Timeouts ampliados** | Frontend 10 min; cliente OCR backend 10 min (evita el error `timeout of 60000ms exceeded`). |
+| **CUDA / GPU** | Layout en `cuda` + OCR vía Ollama en GPU (probado en RTX 5050 8 GB). |
+| **Config local** | `config.yaml` (Ollama+GPU) y `config.ollama.yaml` de respaldo. |
+| **Scripts Windows** | `scripts/start-vllm.ps1` (vLLM + MSVC/cl.exe para RTX 50), lote de imágenes, etc. |
+| **Apps web** | Frontend React (`:3006`) + Backend FastAPI (`:8000`) + servidor SDK (`:5002`). |
+
+### Arquitectura local
+
+```
+[Frontend :3006]  →  [Backend FastAPI :8000]  →  [glmocr.server :5002]
+                                                      │
+                         layout (PP-DocLayout, CUDA/CPU) + OCR API
+                                                      │
+                              [Ollama :11434]  o  [vLLM :8080]
+```
+
+### Arranque rápido (Windows)
+
+**Requisitos:** Python ≥ 3.12, Node ≥ 18, pnpm ≥ 8, [Ollama](https://ollama.com) con `glm-ocr:latest`, GPU NVIDIA recomendada.
+
+```powershell
+# 1) Modelo OCR en Ollama
+ollama pull glm-ocr:latest
+# ollama serve  (si no está como servicio)
+
+# 2) SDK + servidor de pipeline
+cd C:\ruta\GLM-OCR
+.\.venv\Scripts\activate   # o: uv venv --python 3.12 --seed
+uv pip install -e ".[selfhosted,server]"
+python -m glmocr.server --config config.yaml
+# → http://127.0.0.1:5002/glmocr/parse  (solo POST)
+# → http://127.0.0.1:5002/health
+
+# 3) Backend de tareas
+cd apps\backend
+uv sync
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# → http://localhost:8000/docs
+
+# 4) Frontend
+cd apps\frontend
+pnpm install
+pnpm dev
+# → http://localhost:3006
+```
+
+### Configuración GPU (`config.yaml`)
+
+```yaml
+pipeline:
+  maas:
+    enabled: false
+  ocr_api:
+    api_host: localhost
+    api_port: 11434
+    api_path: /api/generate
+    model: glm-ocr:latest
+    api_mode: ollama_generate
+    request_timeout: 600
+  max_workers: 2
+  layout:
+    model_dir: PaddlePaddle/PP-DocLayoutV3_safetensors
+    device: cuda   # si hay OOM de VRAM, usar: cpu
+    batch_size: 1
+```
+
+**Notas de rendimiento**
+
+- Una página densa puede tardar **1–5 minutos** (layout + OCR por región). Es esperado.
+- Con **1 archivo**, la barra de lote permanece en 0 % hasta terminar; el progreso real está en cada ítem / panel derecho.
+- `/glmocr/parse` en el navegador (GET) responde **405 Method Not Allowed** — es normal; solo acepta POST.
+- **vLLM (opcional, más throughput):**
+
+```powershell
+.\scripts\start-vllm.ps1
+# Luego apuntar config a api_port: 8080, api_mode: openai, model: glm-ocr
+```
+
+En RTX 50 (sm_120) hace falta **VS Build Tools** (`cl.exe`) para compilar FlashInfer; el script lo añade al PATH si está instalado.
+
+### URLs útiles
+
+| Servicio | URL |
+| -------- | --- |
+| Interfaz OCR | http://localhost:3006 |
+| API Backend / docs | http://localhost:8000/docs |
+| Health OCR SDK | http://127.0.0.1:5002/health |
+| Ollama | http://127.0.0.1:11434 |
+
+---
+
+## SDK GLM-OCR
+
+### Instalación
 
 ```bash
-# Cloud / MaaS + local images / PDFs (fastest install)
+# Nube / MaaS + imágenes/PDF locales
 pip install glmocr
 
-# Self-hosted pipeline (layout detection)
+# Pipeline self-hosted (layout)
 pip install "glmocr[selfhosted]"
 
-# Flask service support
+# Servicio Flask
 pip install "glmocr[server]"
 ```
 
-Install from source for development:
+Desde código fuente:
 
 ```bash
-# Install from source
-git clone https://github.com/zai-org/glm-ocr.git
+git clone https://github.com/drosales10/glm-ocr.git
 cd glm-ocr
-uv venv --python 3.12 --seed && source .venv/bin/activate
+uv venv --python 3.12 --seed && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 uv pip install -e .
 ```
 
-### Model Deployment
+### Despliegue del modelo
 
-Two ways to use GLM-OCR:
+#### Opción 1: API MaaS de Zhipu (inicio rápido en la nube)
 
-#### Option 1: Zhipu MaaS API (Recommended for Quick Start)
-
-Use the hosted cloud API – no GPU needed. The cloud service runs the complete GLM-OCR pipeline internally, so the SDK simply forwards your request and returns the result.
-
-1. Get an API key from https://open.bigmodel.cn
-2. Configure `config.yaml`:
+Sin GPU local. Obtén una API key en https://open.bigmodel.cn y configura:
 
 ```yaml
-pipeline:
-  maas:
-    enabled: true # Enable MaaS mode
-    api_key: your-api-key # Required
-```
-
-That's it! When `maas.enabled=true`, the SDK acts as a thin wrapper that:
-
-- Forwards your documents to the Zhipu cloud API
-- Returns the results directly (Markdown + JSON layout details)
-- No local processing, no GPU required
-
-Input note (MaaS): the upstream API accepts `file` as a URL or a `data:<mime>;base64,...` data URI.
-If you have raw base64 without the `data:` prefix, wrap it as a data URI (recommended). The SDK will
-auto-wrap local file paths / bytes / raw base64 into a data URI when calling MaaS.
-
-API documentation: https://docs.bigmodel.cn/cn/guide/models/vlm/glm-ocr
-
-#### Option 2: Self-host with vLLM / SGLang
-
-Deploy the GLM-OCR model locally for full control. The SDK provides the complete pipeline: layout detection, parallel region OCR, and result formatting.
-
-Install the self-hosted extra first:
-
-```bash
-pip install "glmocr[selfhosted]"
-```
-
-##### Using vLLM
-
-Install vLLM:
-
-```bash
-docker pull vllm/vllm-openai:v0.19.0-ubuntu2404
-```
-
-Or using with pip:
-
-```bash
-pip install -U "vllm>=0.19.0"
-```
-
-Launch the service:
-
-```bash
-pip install "transformers>=5.3.0"
-
-vllm serve zai-org/GLM-OCR  --port 8080 --speculative-config '{"method": "mtp", "num_speculative_tokens": 3}' --served-model-name glm-ocr
-```
-
->Note
-  Add `--max-model-len` and `--gpu-memory-utilization` according to Your own machine to handle large image/pdf
-
-##### Using SGLang
-
-Install SGLang:
-
-```bash
-docker pull lmsysorg/sglang:v0.5.10
-```
-
-Or using with pip:
-
-```bash
-pip install "sglang>=0.5.10"
-```
-
-Launch the service:
-
-```bash
-SGLANG_ENABLE_SPEC_V2=1 sglang serve --model-path zai-org/GLM-OCR --port 8080 --speculative-algorithm NEXTN --speculative-num-steps 3 --speculative-eagle-topk 1 --speculative-num-draft-tokens 4 --served-model-name glm-ocr
-```
-
->Note
-  Add `--context-len` and `--mem-fraction-static` according to Your own machine to handle large image/pdf
-
-
-#### Option 3: Ollama/MLX
-
-For specialized deployment scenarios, see the detailed guides:
-
-- **[Apple Silicon with mlx-vlm](examples/mlx-deploy/README.md)** - Optimized for Apple Silicon Macs
-- **[Ollama Deployment](examples/ollama-deploy/README.md)** - Simple local deployment with Ollama
-
-#### Option 4: SDK Server + Client (GPU-less Client)
-
-Deploy the SDK Server on a GPU machine, then use any machine as a client — no GPU needed on the client side. The client connects via the MaaS-compatible protocol, pointing `api_url` at your self-hosted server.
-
-```yaml
-# Client config.yaml
 pipeline:
   maas:
     enabled: true
-    api_url: http://<SERVER_IP>:5002/glmocr/parse
-    api_key: any-string    # self-hosted server does not validate keys
-    verify_ssl: false
+    api_key: tu-api-key
 ```
 
-See the full guide: **[Self-hosted SDK Server + Client](examples/self-host/README.md)**
+Documentación: https://docs.bigmodel.cn/cn/guide/models/vlm/glm-ocr
 
-#### Update Configuration
+#### Opción 2: Self-host con vLLM / SGLang
 
-After launching the service, configure `config.yaml`:
+```bash
+pip install "glmocr[selfhosted]"
+pip install -U "vllm>=0.19.0"
+pip install "transformers>=5.3.0"
+
+vllm serve zai-org/GLM-OCR --port 8080 \
+  --speculative-config '{"method": "mtp", "num_speculative_tokens": 3}' \
+  --served-model-name glm-ocr
+```
+
+Ajusta `--max-model-len` y `--gpu-memory-utilization` según tu hardware.
+
+**SGLang:**
+
+```bash
+SGLANG_ENABLE_SPEC_V2=1 sglang serve --model-path zai-org/GLM-OCR --port 8080 \
+  --speculative-algorithm NEXTN --speculative-num-steps 3 \
+  --speculative-eagle-topk 1 --speculative-num-draft-tokens 4 \
+  --served-model-name glm-ocr
+```
+
+#### Opción 3: Ollama / MLX
+
+- **[Apple Silicon con mlx-vlm](examples/mlx-deploy/README.md)**
+- **[Despliegue con Ollama](examples/ollama-deploy/README.md)**
+
+En este repo, Ollama + `config.yaml` es la vía recomendada en Windows con GPU.
+
+#### Opción 4: Servidor SDK + cliente sin GPU
 
 ```yaml
 pipeline:
   maas:
-    enabled: false # Disable MaaS mode (default)
-  ocr_api:
-    api_host: localhost # or your vLLM/SGLang server address
-    api_port: 8080
+    enabled: true
+    api_url: http://<IP_SERVIDOR>:5002/glmocr/parse
+    api_key: cualquier-cadena
+    verify_ssl: false
 ```
 
-### SDK Usage Guide
+Guía completa: **[Self-hosted SDK Server + Client](examples/self-host/README.md)**
+
+#### Configuración tras levantar el servicio OCR
+
+```yaml
+pipeline:
+  maas:
+    enabled: false
+  ocr_api:
+    api_host: localhost
+    api_port: 8080   # vLLM/SGLang; o 11434 con Ollama
+```
+
+### Guía de uso del SDK
 
 #### CLI
 
 ```bash
-# Parse a single image
 glmocr parse examples/source/code.png
-
-# Parse a directory
 glmocr parse examples/source/
-
-# Set output directory
 glmocr parse examples/source/code.png --output ./results/
-
-# Use a custom config
-glmocr parse examples/source/code.png --config my_config.yaml
-
-# Enable debug logging with profiling
+glmocr parse examples/source/code.png --config config.yaml
 glmocr parse examples/source/code.png --log-level DEBUG
-
-# Run layout detection on CPU (keep GPU free for OCR model)
 glmocr parse examples/source/code.png --layout-device cpu
-
-# Run layout detection on a specific GPU
-glmocr parse examples/source/code.png --layout-device cuda:1
-
-# Override any config value via --set (dotted path, repeatable)
+glmocr parse examples/source/code.png --layout-device cuda:0
 glmocr parse examples/source/code.png --set pipeline.ocr_api.api_port 8080
-glmocr parse examples/source/ --set pipeline.layout.use_polygon true --set logging.level DEBUG
 ```
 
-#### Python API
+#### API Python
 
 ```python
 from glmocr import GlmOcr, parse
 
-# Simple function
 result = parse("image.png")
-result = parse(["img1.png", "img2.jpg"])
-result = parse("https://example.com/image.png")
 result.save(output_dir="./results")
 
-# Note: a list is treated as pages of a single document.
-
-# Class-based API
 with GlmOcr() as parser:
     result = parser.parse("image.png")
     print(result.json_result)
-    result.save()
 
-# Place layout model on CPU (useful when GPU is reserved for OCR)
 with GlmOcr(layout_device="cpu") as parser:
-    result = parser.parse("image.png")
-
-# Place layout model on a specific GPU
-with GlmOcr(layout_device="cuda:1") as parser:
     result = parser.parse("image.png")
 ```
 
-#### Flask Service
-
-Install the optional server dependency first:
+#### Servicio Flask
 
 ```bash
 pip install "glmocr[server]"
-```
+python -m glmocr.server --config config.yaml
 
-```bash
-# Start service
-python -m glmocr.server
-
-# With debug logging
-python -m glmocr.server --log-level DEBUG
-
-# Call API
 curl -X POST http://localhost:5002/glmocr/parse \
   -H "Content-Type: application/json" \
-  -d '{"images": ["./example/source/code.png"]}'
+  -d '{"images": ["./examples/source/code.png"]}'
 ```
 
-Semantics:
+- `images` puede ser string o lista (páginas de un mismo documento).
+- Para varios documentos independientes, llama al endpoint una vez por documento.
 
-- `images` can be a string or a list.
-- A list is treated as pages of a single document.
-- For multiple independent documents, call the endpoint multiple times (one document per request).
+### Arquitectura modular
 
-
-### Modular Architecture
-
-GLM-OCR uses composable modules for easy customization:
-
-| Component             | Description                            |
-| --------------------- | -------------------------------------- |
-| `PageLoader`          | Preprocessing and image encoding       |
-| `OCRClient`           | Calls the GLM-OCR model service        |
-| `PPDocLayoutDetector` | PP-DocLayout layout detection          |
-| `ResultFormatter`     | Post-processing, outputs JSON/Markdown |
-
-You can extend the behavior by creating custom pipelines:
+| Componente            | Descripción                         |
+| --------------------- | ----------------------------------- |
+| `PageLoader`          | Preprocesado y codificación         |
+| `OCRClient`           | Llamadas al servicio del modelo     |
+| `PPDocLayoutDetector` | Detección de layout PP-DocLayout    |
+| `ResultFormatter`     | Postprocesado JSON / Markdown       |
 
 ```python
 from glmocr.dataloader import PageLoader
 from glmocr.ocr_client import OCRClient
 from glmocr.postprocess import ResultFormatter
-
 
 class MyPipeline:
   def __init__(self, config):
@@ -306,11 +297,10 @@ class MyPipeline:
     self.formatter = ResultFormatter(config)
 
   def process(self, request_data):
-    # Implement your own processing logic
     pass
 ```
 
-## Star History
+## Historial de estrellas
 
 <a href="https://www.star-history.com/?repos=zai-org%2FGLM-OCR&type=date&legend=top-left">
  <picture>
@@ -320,25 +310,25 @@ class MyPipeline:
  </picture>
 </a>
 
-## Acknowledgement
+## Agradecimientos
 
-This project is inspired by the excellent work of the following projects and communities:
+Proyecto inspirado en:
 
 - [PP-DocLayout-V3](https://huggingface.co/PaddlePaddle/PP-DocLayoutV3)
 - [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR)
 - [MinerU](https://github.com/opendatalab/MinerU)
 
-## License
+Upstream original: [zai-org/GLM-OCR](https://github.com/zai-org/GLM-OCR)
 
-The Code of this repo is under Apache License 2.0.
+## Licencia
 
-The GLM-OCR model is released under the MIT License.
+El código de este repositorio está bajo Apache License 2.0.
 
-The complete OCR pipeline integrates [PP-DocLayoutV3](https://huggingface.co/PaddlePaddle/PP-DocLayoutV3) for document layout analysis, which is licensed under the Apache License 2.0. Users should comply with both licenses when using this project.
+El modelo GLM-OCR se publica bajo MIT License.
 
-## Citation
+El pipeline integra [PP-DocLayoutV3](https://huggingface.co/PaddlePaddle/PP-DocLayoutV3) (Apache 2.0). Cumple ambas licencias al usar el proyecto.
 
-If you find GLM-OCR useful in your research, please cite our technical report:
+## Cita
 
 ```bibtex
 @misc{duan2026glmocrtechnicalreport,

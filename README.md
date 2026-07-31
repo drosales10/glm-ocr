@@ -50,7 +50,7 @@ Este fork/adaptación está orientado a **despliegue 100 % local** (sin depender
 | **Timeouts ampliados** | Frontend 10 min; cliente OCR backend 10 min (evita el error `timeout of 60000ms exceeded`). |
 | **CUDA / GPU** | Layout en `cuda` + OCR vía Ollama en GPU (probado en RTX 5050 8 GB). |
 | **Config local** | `config.yaml` (Ollama+GPU) y `config.ollama.yaml` de respaldo. |
-| **Scripts Windows** | `scripts/start-vllm.ps1` (vLLM + MSVC/cl.exe para RTX 50), lote de imágenes, etc. |
+| **Scripts Windows** | `scripts/start-vllm.ps1`, CLI de lotes `scripts/batch_process_images.py`, bat de ejemplo. |
 | **Apps web** | Frontend React (`:3006`) + Backend FastAPI (`:8000`) + servidor SDK (`:5002`). |
 
 ### Arquitectura local
@@ -135,6 +135,65 @@ En RTX 50 (sm_120) hace falta **VS Build Tools** (`cl.exe`) para compilar FlashI
 | API Backend / docs | http://localhost:8000/docs |
 | Health OCR SDK | http://127.0.0.1:5002/health |
 | Ollama | http://127.0.0.1:11434 |
+
+### CLI de procesamiento por lotes
+
+Para OCR masivo de un directorio de imágenes (sin pasar por la UI web), usa el script:
+
+`scripts/batch_process_images.py`
+
+Requisitos: entorno con `glmocr[selfhosted]` instalado y motor OCR activo (Ollama o vLLM según `config.yaml`).
+
+```powershell
+# Desde la raíz del repo
+.\.venv\Scripts\activate
+
+# Lote básico
+python scripts/batch_process_images.py --input ".\ruta\a\imagenes"
+
+# Con salida y config local (Ollama/GPU)
+python scripts/batch_process_images.py `
+  --input ".\ruta\a\imagenes" `
+  --output ".\results\mi_lote" `
+  --config ".\config.yaml" `
+  --skip-existing `
+  --verbose
+
+# Rango de índices + reintentos + paralelo
+python scripts/batch_process_images.py `
+  -i ".\ruta\a\imagenes" `
+  -o ".\results\mi_lote" `
+  -c ".\config.yaml" `
+  --start-index 0 `
+  --end-index 50 `
+  --retry-count 3 `
+  --retry-delay 5 `
+  --parallel 1 `
+  --layout-device cuda `
+  --skip-existing `
+  --verbose
+```
+
+**Opciones principales**
+
+| Opción | Alias | Descripción |
+| ------ | ----- | ----------- |
+| `--input` | `-i` | Directorio de entrada (obligatorio) |
+| `--output` | `-o` | Directorio de resultados (por defecto: `input/results`) |
+| `--config` | `-c` | YAML de configuración (p. ej. `config.yaml`) |
+| `--start-index` | `-s` | Índice inicial (default: 0) |
+| `--end-index` | `-e` | Índice final (default: todos) |
+| `--retry-count` | `-r` | Reintentos por error (default: 3) |
+| `--retry-delay` | `-d` | Segundos entre reintentos (default: 5) |
+| `--parallel` | `-p` | Imágenes en paralelo (default: 1; en 8 GB VRAM conviene 1) |
+| `--skip-existing` | `-k` | Omite archivos que ya tienen resultado |
+| `--verbose` | `-v` | Logs detallados |
+| `--json-only` | `-j` | No guarda visualizaciones de layout (sí guarda Markdown) |
+| `--layout-device` | `-l` | `cpu`, `cuda` o `mps` |
+
+Formatos admitidos: `.jpg`, `.jpeg`, `.png`, `.bmp`, `.webp`, `.tiff`, `.gif`.
+
+**Atajo Windows (ejemplo):** `scripts/process_arboles_cultivados.bat` ejecuta el mismo CLI sobre una carpeta concreta; edita las rutas `--input` / `--output` según tu caso.
 
 ---
 

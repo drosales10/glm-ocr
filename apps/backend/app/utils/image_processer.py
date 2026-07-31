@@ -6,16 +6,16 @@ from PIL import Image
 
 
 def encode_image(image_path: str) -> str:
-    """将图像文件编码为base64字符串。
+    """Codifica un archivo de imagen como cadena base64.
 
     Args:
-        image_path: 图像文件路径
+        image_path: Ruta del archivo de imagen
 
     Returns:
-        Base64编码的图像字符串
+        Cadena de imagen codificada en Base64
 
     Raises:
-        ImageEncodingError: 如果图像编码失败
+        ImageEncodingError: Si falla la codificación de la imagen
     """
     try:
         path = Path(image_path)
@@ -35,29 +35,29 @@ def crop_image_by_bbox_to_path(
     output_path: str,
 ) -> str:
     """
-    根据bbox裁剪图片到指定路径
+    Recorta la imagen según el bbox a la ruta especificada
 
     Args:
-        source_image_path: 源图片路径
-        bbox: 边界框 [x1, y1, x2, y2]
-        output_path: 输出文件完整路径
+        source_image_path: Ruta de la imagen de origen
+        bbox: Cuadro delimitador [x1, y1, x2, y2]
+        output_path: Ruta completa del archivo de salida
 
     Returns:
-        裁剪后的图片路径（与输入output_path相同）
+        Ruta de la imagen recortada (igual que output_path de entrada)
     """
-    # 确保输出目录存在
+    # Asegura que el directorio de salida exista
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-    # 打开源图片
+    # Abrir la imagen de origen
     with Image.open(source_image_path) as img:
-        # bbox格式: [x1, y1, x2, y2]
-        # PIL的crop使用: (left, upper, right, lower)
+        # Formato bbox: [x1, y1, x2, y2]
+        # crop de PIL usa: (left, upper, right, lower)
         x1, y1, x2, y2 = bbox
 
-        # 裁剪图片
+        # Recortar la imagen
         cropped_img = img.crop((x1, y1, x2, y2))
 
-        # 保存裁剪后的图片
+        # Guardar la imagen recortada
         cropped_img.save(output_path)
 
         return output_path

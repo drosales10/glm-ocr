@@ -1,11 +1,11 @@
 """
-处理流程模块
+Módulo de flujos de procesamiento
 """
 
 from app.core.flows.base import TaskProcessingFlow, ProcessingContext, StepProgress, FlowFactory
 from app.core.flows.pipeline_flow import PipelineFlow
 
-# 注册流程
+# Registrar flujos
 FlowFactory.register_flow("pipeline", PipelineFlow)
 
 __all__ = [

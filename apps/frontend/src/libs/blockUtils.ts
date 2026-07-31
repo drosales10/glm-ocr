@@ -1,7 +1,7 @@
 import type { Block } from '../store/useOcrStore'
 
 /**
- * 检查点是否在 bbox 内
+ * Comprueba si un punto está dentro del bbox
  */
 export function isPointInBbox(
 	x: number,
@@ -13,7 +13,7 @@ export function isPointInBbox(
 }
 
 /**
- * 查找包含指定坐标的 block
+ * Busca el block que contiene las coordenadas dadas
  */
 export function findBlockAtPoint(
 	blocks: Block[],
@@ -29,7 +29,7 @@ export function findBlockAtPoint(
 }
 
 /**
- * PDF 坐标转换：从屏幕坐标转换为 PDF 相对坐标
+ * Conversión de coordenadas PDF: de coordenadas de pantalla a coordenadas relativas del PDF
  */
 export function convertPdfScreenToRelative(
 	screenX: number,
@@ -47,7 +47,7 @@ export function convertPdfScreenToRelative(
 }
 
 /**
- * 图片坐标转换：从屏幕坐标转换为原始图片坐标
+ * Conversión de coordenadas de imagen: de coordenadas de pantalla a coordenadas originales de la imagen
  */
 export function convertImageScreenToOriginal(
 	screenX: number,

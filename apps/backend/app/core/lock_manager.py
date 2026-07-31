@@ -1,5 +1,5 @@
 """
-任务锁管理器
+Administrador de bloqueos de tareas
 """
 import asyncio
 from datetime import datetime, timedelta, UTC
@@ -13,7 +13,7 @@ from app.utils.logger import logger
 
 
 class LockManager:
-    """任务锁管理器"""
+    """Administrador de bloqueos de tareas"""
 
     def __init__(self, session: AsyncSession, default_timeout: int = 3600):
         self.session = session
@@ -27,15 +27,15 @@ class LockManager:
         timeout: Optional[int] = None
     ) -> Optional[Task]:
         """
-        获取任务锁
+        Adquiere el bloqueo de la tarea
 
         Args:
-            task_id: 任务ID
+            task_id: ID de la tarea
             worker_id: Worker ID
-            timeout: 锁超时时间（秒）
+            timeout: Tiempo de espera del bloqueo (segundos)
 
         Returns:
-            Optional[Task]: 成功返回任务，失败返回None
+            Optional[Task]: Devuelve la tarea si tiene éxito; None si falla
         """
         lock_timeout = timeout or self.default_timeout
 
@@ -65,16 +65,16 @@ class LockManager:
         error_message: Optional[str] = None
     ) -> bool:
         """
-        释放任务锁
+        Libera el bloqueo de la tarea
 
         Args:
-            task_id: 任务ID
+            task_id: ID de la tarea
             worker_id: Worker ID
-            status: 最终状态
-            error_message: 错误信息
+            status: Estado final
+            error_message: Mensaje de error
 
         Returns:
-            bool: 是否成功释放
+            bool: Si se liberó correctamente
         """
         try:
             success = await self.task_repo.release_task_lock(
@@ -95,14 +95,14 @@ class LockManager:
 
     async def renew(self, task_id: str, worker_id: str) -> bool:
         """
-        续期任务锁
+        Renueva el bloqueo de la tarea
 
         Args:
-            task_id: 任务ID
+            task_id: ID de la tarea
             worker_id: Worker ID
 
         Returns:
-            bool: 是否成功续期
+            bool: Si se renovó correctamente
         """
         try:
             success = await self.task_repo.renew_task_lock(
@@ -122,10 +122,10 @@ class LockManager:
 
     async def recover_expired_locks(self) -> int:
         """
-        恢复过期的锁
+        Recupera bloqueos expirados
 
         Returns:
-            int: 恢复的任务数量
+            int: Número de tareas recuperadas
         """
         try:
             expired_tasks = await self.task_repo.get_expired_locks(limit=100)
@@ -133,7 +133,7 @@ class LockManager:
             recovered_count = 0
             for task in expired_tasks:
                 try:
-                    # 检查是否可以重试
+                    # Comprobar si se puede reintentar
                     if task.can_retry:
                         await self.task_repo.reset_task_for_retry(
                             task_id=task.task_id,
@@ -142,7 +142,7 @@ class LockManager:
                         recovered_count += 1
                         logger.info(f"Recovered task {task.task_id} (lock expired)")
                     else:
-                        # 超过最大重试次数，标记为死信
+                        # Se superó el número máximo de reintentos; marcar como carta muerta
                         await self.task_repo.update_task_status(
                             task_id=task.task_id,
                             status=TaskStatus.DEAD_LETTER,

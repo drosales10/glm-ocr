@@ -1,5 +1,5 @@
 """
-PDF转图片步骤 - 适配app_v2
+Paso de conversión PDF a imagen - adaptado a app_v2
 """
 
 import os
@@ -38,20 +38,20 @@ async def pdf_to_image(
     progress_callback: Optional[Callable[[float, str], None]] = None,
 ) -> Dict[str, Any]:
     """
-    将PDF文件转换为图片
+    Convierte un archivo PDF a imágenes
 
     Args:
-        file_path: PDF文件路径
-        output_dir: 输出目录
-        dpi: DPI设置
-        format: 输出格式 (png, jpg等)
-        progress_callback: 进度回调函数
+        file_path: Ruta del archivo PDF
+        output_dir: Directorio de salida
+        dpi: Configuración de DPI
+        format: Formato de salida (png, jpg, etc.)
+        progress_callback: Función de callback de progreso
 
     Returns:
-        Dict[str, Any]: 转换结果
-            - output_files: list[str] - 输出图片文件路径列表
-            - page_count: int - 页数
-            - metadata: dict - 元数据
+        Dict[str, Any]: Resultado de la conversión
+            - output_files: list[str] - Lista de rutas de archivos de imagen de salida
+            - page_count: int - Número de páginas
+            - metadata: dict - Metadatos
     """
 
     output_dir = input.output_dir
@@ -65,10 +65,10 @@ async def pdf_to_image(
 
     try:
 
-        # 创建转换服务
+        # Crear el servicio de conversión
         converter_service = FileConverterService(default_dpi=dpi, default_format=format)
 
-        # 验证文件
+        # Validar el archivo
         if progress_callback:
             await progress_callback(10.0, "Validating file")
 
@@ -76,14 +76,14 @@ async def pdf_to_image(
         if not is_valid:
             raise ValueError(f"File validation failed: {file_path}")
 
-        # 创建输出目录
+        # Crear el directorio de salida
         images_output_dir = os.path.join(output_dir, "images")
         os.makedirs(images_output_dir, exist_ok=True)
 
         if progress_callback:
             await progress_callback(20.0, "Converting PDF to images")
 
-        # 执行转换
+        # Ejecutar la conversión
         result = await converter_service.convert(
             file_path, output_dir=images_output_dir, dpi=dpi, format=format
         )
@@ -92,7 +92,7 @@ async def pdf_to_image(
         page_count = result["page_count"]
         metadata = result["metadata"]
 
-        # 保存转换信息到JSON文件
+        # Guardar la información de conversión en un archivo JSON
         json_output_path = os.path.join(images_output_dir, "conversion_info.json")
         conversion_info = {
             "input_file": file_path,

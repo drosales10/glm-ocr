@@ -1,5 +1,5 @@
 """
-数据库模块
+Módulo de base de datos
 """
 
 from app.db.database import AsyncSessionLocal, init_db, close_db

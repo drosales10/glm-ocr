@@ -1,5 +1,5 @@
 """
-任务相关的Pydantic Schema
+Esquemas Pydantic relacionados con tareas
 """
 
 from pydantic import BaseModel, Field
@@ -8,17 +8,17 @@ from datetime import datetime
 
 
 class TaskSubmitRequest(BaseModel):
-    """任务提交请求"""
+    """Solicitud de envío de tarea"""
 
-    original_filename: str = Field(..., description="原始文件名")
-    file_type: str = Field(..., description="文件类型")
-    file_size: int = Field(..., gt=0, description="文件大小")
-    file_path: str = Field(..., description="文件路径")
-    processing_mode: str = Field(default="pipeline", description="处理模式")
-    priority: int = Field(default=2, ge=1, le=4, description="优先级 (1-4)")
-    ocr_config: Optional[Dict[str, Any]] = Field(default=None, description="OCR配置")
-    output_format: str = Field(default="markdown", description="输出格式")
-    retry_config: Optional[Dict[str, Any]] = Field(default=None, description="重试配置")
+    original_filename: str = Field(..., description="Nombre original del archivo")
+    file_type: str = Field(..., description="Tipo de archivo")
+    file_size: int = Field(..., gt=0, description="Tamaño del archivo")
+    file_path: str = Field(..., description="Ruta del archivo")
+    processing_mode: str = Field(default="pipeline", description="Modo de procesamiento")
+    priority: int = Field(default=2, ge=1, le=4, description="Prioridad (1-4)")
+    ocr_config: Optional[Dict[str, Any]] = Field(default=None, description="Configuración OCR")
+    output_format: str = Field(default="markdown", description="Formato de salida")
+    retry_config: Optional[Dict[str, Any]] = Field(default=None, description="Configuración de reintentos")
 
     class Config:
         json_schema_extra = {
@@ -36,7 +36,7 @@ class TaskSubmitRequest(BaseModel):
 
 
 class TaskSubmitResponse(BaseModel):
-    """任务提交响应"""
+    """Respuesta de envío de tarea"""
 
     task_id: str
     status: str
@@ -44,7 +44,7 @@ class TaskSubmitResponse(BaseModel):
 
 
 class TaskStatusResponse(BaseModel):
-    """任务状态响应"""
+    """Respuesta de estado de tarea"""
 
     task_id: str
     document_id: str
@@ -66,7 +66,7 @@ class TaskStatusResponse(BaseModel):
 
 
 class TaskInfo(BaseModel):
-    """任务信息（用于列表）"""
+    """Información de tarea (para listados)"""
 
     task_id: str
     document_id: str
@@ -81,14 +81,14 @@ class TaskInfo(BaseModel):
 
 
 class TaskListResponse(BaseModel):
-    """任务列表响应"""
+    """Respuesta de lista de tareas"""
 
     tasks: List[TaskInfo]
     total: int
 
 
 class TaskCancelResponse(BaseModel):
-    """任务取消响应"""
+    """Respuesta de cancelación de tarea"""
 
     task_id: str
     status: str

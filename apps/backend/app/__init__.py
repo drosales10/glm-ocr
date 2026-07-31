@@ -1,5 +1,5 @@
 """
-异步任务执行系统
+Sistema de ejecución de tareas asíncronas
 """
 
 __version__ = "2.0.0"

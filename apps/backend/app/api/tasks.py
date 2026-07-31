@@ -1,5 +1,5 @@
 """
-任务相关API
+API relacionada con tareas
 """
 
 import json
@@ -27,33 +27,33 @@ router = APIRouter(prefix="/tasks", tags=["tasks"])
     status_code=status.HTTP_201_CREATED,
 )
 async def submit_task(
-    file: UploadFile = File(..., description="要处理的文件"),
+    file: UploadFile = File(..., description="Archivo a procesar"),
     processing_mode: str = Form("pipeline"),
-    priority: int = Form(2, description="1=低,2=正常,3=高,4=紧急"),
+    priority: int = Form(2, description="1=baja,2=normal,3=alta,4=urgente"),
     custom_url : str = Form(None, description=""),
     output_format: str = Form("markdown"),
 ):
     """
-    提交新任务
+    Envía una nueva tarea
 
-    - **file**: 上传文件
-    - **processing_mode**: 处理模式，默认pipeline
-    - **priority**: 优先级 (1=低, 2=正常, 3=高, 4=紧急)
-    - **ocr_config**: OCR配置（JSON字符串，可选）
-    - **output_format**: 输出格式，默认markdown
-    - **retry_config**: 重试配置（JSON字符串，可选）
+    - **file**: Archivo subido
+    - **processing_mode**: Modo de procesamiento; por defecto pipeline
+    - **priority**: Prioridad (1=baja, 2=normal, 3=alta, 4=urgente)
+    - **ocr_config**: Configuración OCR (cadena JSON, opcional)
+    - **output_format**: Formato de salida; por defecto markdown
+    - **retry_config**: Configuración de reintentos (cadena JSON, opcional)
     """
     try:
-        # 生成document_id
+        # Generar document_id
         document_id = str(uuid.uuid4())
         task_id = str(uuid.uuid4())
 
         parsed_ocr_config = None
-        # 解析配置
+        # Parsear la configuración
         if custom_url is not None :
             parsed_ocr_config = {"custom_url":custom_url}
 
-        # 保存文件
+        # Guardar el archivo
         save_dir = str(Path(settings.OUTPUT_DIR) / task_id)
         saved_path = await file_upload_handler.save_to_path(
             file=file,
@@ -64,7 +64,7 @@ async def submit_task(
         file_size = saved_path_obj.stat().st_size
         file_type = saved_path_obj.suffix.lstrip(".").lower()
 
-        # 提交任务
+        # Enviar la tarea
         task_manager = get_task_manager()
         await task_manager.submit_task(
             task_id=task_id,
@@ -103,40 +103,40 @@ async def submit_task(
 @router.get("/file")
 async def read_file(path: str):
     """
-    读取指定路径的文件内容
+    Lee el contenido del archivo en la ruta indicada
 
-    对于图片文件，直接返回图片数据
-    对于其他文件，返回JSON格式的文件信息
+    Para archivos de imagen, devuelve directamente los datos de la imagen
+    Para otros archivos, devuelve la información del archivo en formato JSON
 
-    - **path**: 文件路径
+    - **path**: Ruta del archivo
     """
     try:
         file_path = Path(path)
 
-        # 检查文件是否存在
+        # Comprobar si el archivo existe
         if not file_path.exists():
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"File not found: {path}",
             )
 
-        # 检查是否为文件
+        # Comprobar si es un archivo
         if not file_path.is_file():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Path is not a file: {path}",
             )
 
-        # 获取文件MIME类型
+        # Obtener el tipo MIME del archivo
         mime_type, _ = guess_type(file_path.name)
         if mime_type is None:
             mime_type = "application/octet-stream"
 
-        # 读取文件内容
+        # Leer el contenido del archivo
         with open(file_path, "rb") as f:
             content = f.read()
 
-        # 如果是图片文件，直接返回二进制数据
+        # Si es un archivo de imagen, devolver directamente los datos binarios
         if mime_type.startswith("image/"):
             return Response(
                 content=content,
@@ -146,7 +146,7 @@ async def read_file(path: str):
                 }
             )
 
-        # 其他文件类型，返回JSON格式
+        # Otros tipos de archivo: devolver en formato JSON
         try:
             text_content = content.decode("utf-8")
         except UnicodeDecodeError:
@@ -177,9 +177,9 @@ async def read_file(path: str):
 @router.get("/{task_id}", response_model=ApiResponse[dict])
 async def get_task_status(task_id: str):
     """
-    获取任务状态
+    Obtiene el estado de la tarea
 
-    - **task_id**: 任务ID
+    - **task_id**: ID de la tarea
     """
     try:
         task_manager = get_task_manager()
@@ -191,7 +191,7 @@ async def get_task_status(task_id: str):
                 detail=f"Task not found: {task_id}",
             )
 
-        # 如果有 result_file_path，读取并合并内容
+        # Si hay result_file_path, leer y fusionar el contenido
         result_file_path = task_info.get("result_file_path")
         result_data = None
         if result_file_path:
@@ -206,7 +206,7 @@ async def get_task_status(task_id: str):
             except Exception as e:
                 logger.warning(f"Failed to read result file: {e}")
 
-        # 构建响应数据
+        # Construir los datos de la respuesta
         response_data = {
             "task_id": task_info.get("task_id"),
             "document_id": task_info.get("document_id"),
@@ -223,7 +223,7 @@ async def get_task_status(task_id: str):
             "worker_id": task_info.get("worker_id"),
         }
 
-        # 添加结果数据
+        # Añadir los datos del resultado
         if result_data:
             response_data["metadata"]= result_data.get("metadata")
             response_data["full_markdown"] = result_data.get("full_markdown")
@@ -248,9 +248,9 @@ async def get_task_status(task_id: str):
 @router.delete("/{task_id}", response_model=ApiResponse[dict])
 async def cancel_task(task_id: str):
     """
-    取消任务
+    Cancela la tarea
 
-    - **task_id**: 任务ID
+    - **task_id**: ID de la tarea
     """
     try:
         task_manager = get_task_manager()
@@ -284,11 +284,11 @@ async def cancel_task(task_id: str):
 @router.get("/", response_model=ApiResponse[dict])
 async def list_tasks(status: Optional[str] = None, limit: int = 100, offset: int = 0):
     """
-    列出任务
+    Lista las tareas
 
-    - **status**: 过滤状态 (pending, processing, completed, failed, cancelled)
-    - **limit**: 返回数量限制
-    - **offset**: 偏移量
+    - **status**: Estado de filtro (pending, processing, completed, failed, cancelled)
+    - **limit**: Límite de cantidad a devolver
+    - **offset**: Desplazamiento (offset)
     """
     try:
         task_manager = get_task_manager()

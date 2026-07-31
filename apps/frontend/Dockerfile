@@ -1,40 +1,40 @@
-# 使用 Node.js 官方镜像作为基础镜像
+# Usar la imagen oficial de Node.js como imagen base
 FROM node:lts-alpine as build-stage
 
-# 设置工作目录
+# Establecer el directorio de trabajo
 WORKDIR /app
 
-# 将 package.json 和 pnpm-lock.json 添加到工作目录
+# Copiar package.json y pnpm-lock.yaml al directorio de trabajo
 COPY package.json pnpm-lock.yaml ./
 
-# 启用 corepack 并安装兼容的 pnpm 版本（lockfileVersion 6.0 需要 pnpm 8.x）
+# Habilitar corepack e instalar una versión compatible de pnpm (lockfileVersion 6.0 requiere pnpm 8.x)
 RUN corepack enable && corepack prepare pnpm@8 --activate
-# 安装项目依赖
+# Instalar las dependencias del proyecto
 RUN pnpm install
 
-# 将项目文件添加到工作目录
+# Copiar los archivos del proyecto al directorio de trabajo
 COPY . .
 
-# 构建项目并清理缓存
+# Construir el proyecto y limpiar la caché
 RUN pnpm build && \
     pnpm store prune && \
     rm -rf node_modules
 
-# 使用 Nginx 镜像作为基础镜像
+# Usar la imagen de Nginx como imagen base
 FROM nginx:stable-alpine as production-stage
 
-# 将构建产物复制到 Nginx 服务器的服务目录
+# Copiar el resultado de la compilación al directorio de servicio de Nginx
 COPY --from=build-stage /app/dist /usr/share/nginx/html
 
-# 复制 Nginx 配置
+# Copiar la configuración de Nginx
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# 添加健康检查（检查 index.html 文件是否存在）
+# Añadir healthcheck (comprobar si existe index.html)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD test -f /usr/share/nginx/html/index.html || exit 1
 
-# 暴露 80 端口
+# Exponer el puerto 80
 EXPOSE 80
 
-# 启动 Nginx 服务器
+# Iniciar el servidor Nginx
 CMD ["nginx", "-g", "daemon off;"]

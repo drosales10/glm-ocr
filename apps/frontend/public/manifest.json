@@ -1,6 +1,6 @@
 {
-  "short_name": "TanStack App",
-  "name": "Create TanStack App Sample",
+  "short_name": "GLM-OCR",
+  "name": "GLM-OCR — Reconocimiento óptico de caracteres",
   "icons": [
     {
       "src": "favicon.ico",

@@ -1,5 +1,5 @@
 """
-图片转换器
+Convertidor de imágenes
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from app.utils.logger import logger
 
 
 class ImageConverter(BaseConverter):
-    """图片格式转换器（统一转换为PNG）"""
+    """Convertidor de formato de imagen (convierte unificadamente a PNG)"""
 
     name = "image_converter"
 
@@ -28,28 +28,28 @@ class ImageConverter(BaseConverter):
         format: str = "png",
         **kwargs
     ) -> Dict[str, Any]:
-        """将图片转换为指定格式（默认PNG）
+        """Convierte la imagen al formato especificado (PNG por defecto)
 
         Args:
-            file_path: 图片文件路径
-            output_dir: 输出目录
-            format: 输出格式（默认png）
-            **kwargs: 其他参数
+            file_path: Ruta del archivo de imagen
+            output_dir: Directorio de salida
+            format: Formato de salida (png por defecto)
+            **kwargs: Otros parámetros
 
         Returns:
-            Dict: 转换结果
+            Dict: Resultado de la conversión
         """
         self.ensure_output_dir(output_dir)
 
         try:
-            # 打开图片文件
+            # Abrir el archivo de imagen
             with Image.open(file_path) as img:
                 width, height = img.size
                 original_format = img.format.lower() if img.format else "unknown"
 
-                logger.info(f"图片尺寸: {width}x{height}, 原始格式: {original_format}")
+                logger.info(f"Dimensiones de la imagen: {width}x{height}, formato original: {original_format}")
 
-                # 获取DPI信息
+                # Obtener información de DPI
                 dpi_info = getattr(img, "info", {}).get("dpi", (None, None))
 
                 page_size = {
@@ -58,30 +58,30 @@ class ImageConverter(BaseConverter):
                     "dpi": dpi_info,
                 }
 
-                # 保存图片元数据
+                # Guardar metadatos de la imagen
                 metadata = self.get_metadata(file_path)
                 metadata.update({
                     "width": width,
                     "height": height,
-                    "format": format,  # 输出格式
-                    "original_format": original_format,  # 原始格式
+                    "format": format,  # Formato de salida
+                    "original_format": original_format,  # Formato original
                     "dpi": dpi_info,
                     "mode": img.mode,
                     "pages": 1,
                     "page_size": page_size,
                 })
 
-                # 构造输出文件路径
+                # Construir la ruta del archivo de salida
                 output_filename = f"page_0001.{format}"
                 output_path = os.path.join(output_dir, output_filename)
 
-                # 将图片转换为RGB模式（如果需要）并保存为指定格式
+                # Convertir la imagen a modo RGB (si es necesario) y guardar en el formato especificado
                 if format == "png":
                     if img.mode in ("RGBA", "P"):
-                        # 如果是RGBA或调色板模式，转换为RGB
+                        # Si es RGBA o modo paleta, convertir a RGB
                         rgb_img = Image.new("RGB", img.size, (255, 255, 255))
                         if img.mode == "RGBA":
-                            rgb_img.paste(img, mask=img.split()[3])  # 使用alpha通道作为mask
+                            rgb_img.paste(img, mask=img.split()[3])  # Usar el canal alpha como máscara
                         else:
                             rgb_img.paste(img)
                         rgb_img.save(output_path, "PNG")
@@ -89,7 +89,7 @@ class ImageConverter(BaseConverter):
                         img.save(output_path, "PNG")
                 elif format == "jpg":
                     if img.mode in ("RGBA", "P"):
-                        # JPEG不支持透明度，需要转换
+                        # JPEG no admite transparencia; hace falta convertir
                         rgb_img = Image.new("RGB", img.size, (255, 255, 255))
                         if img.mode == "RGBA":
                             rgb_img.paste(img, mask=img.split()[3])
@@ -99,9 +99,9 @@ class ImageConverter(BaseConverter):
                     else:
                         img.save(output_path, "JPEG", quality=95)
                 else:
-                    raise ValueError(f"不支持的输出格式: {format}")
+                    raise ValueError(f"Formato de salida no admitido: {format}")
 
-                logger.info(f"图片已保存到: {output_path}")
+                logger.info(f"Imagen guardada en: {output_path}")
 
                 return {
                     "output_files": [output_path],
@@ -110,41 +110,41 @@ class ImageConverter(BaseConverter):
                 }
 
         except Exception as e:
-            logger.error(f"图片转换失败: {str(e)}")
-            raise ConversionFailedError(f"图片转换失败: {str(e)}") from e
+            logger.error(f"Error al convertir la imagen: {str(e)}")
+            raise ConversionFailedError(f"Error al convertir la imagen: {str(e)}") from e
 
     async def validate(self, file_path: str) -> bool:
-        """验证图片文件
+        """Valida el archivo de imagen
 
         Args:
-            file_path: 图片文件路径
+            file_path: Ruta del archivo de imagen
 
         Returns:
-            bool: 是否有效
+            bool: Si es válido
         """
         try:
-            # 检查文件是否存在
+            # Comprobar si el archivo existe
             if not os.path.exists(file_path):
-                logger.error(f"图片文件不存在: {file_path}")
+                logger.error(f"El archivo de imagen no existe: {file_path}")
                 return False
 
-            # 检查文件扩展名
+            # Comprobar la extensión del archivo
             if not self.can_handle(file_path):
-                logger.error(f"不支持的图片格式: {file_path}")
+                logger.error(f"Formato de imagen no admitido: {file_path}")
                 return False
 
-            # 检查文件大小
+            # Comprobar el tamaño del archivo
             file_size = os.path.getsize(file_path)
             if file_size == 0:
-                logger.error("图片文件为空")
+                logger.error("El archivo de imagen está vacío")
                 return False
 
-            # 尝试打开图片验证
+            # Intentar abrir la imagen para validarla
             with Image.open(file_path) as img:
                 width, height = img.size
-                logger.info(f"图片文件验证通过，尺寸: {width}x{height}")
+                logger.info(f"Validación de imagen correcta, dimensiones: {width}x{height}")
                 return True
 
         except Exception as e:
-            logger.error(f"图片文件验证失败: {str(e)}")
+            logger.error(f"Error al validar el archivo de imagen: {str(e)}")
             return False

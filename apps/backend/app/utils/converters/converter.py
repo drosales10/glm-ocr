@@ -1,5 +1,5 @@
 """
-统一的文件转换服务 - 自动识别文件类型并转换
+Servicio unificado de conversión de archivos - detecta el tipo y convierte automáticamente
 """
 
 from __future__ import annotations
@@ -14,14 +14,14 @@ from app.utils.logger import logger
 
 
 class FileConverterService:
-    """文件转换服务 - 统一的转换接口"""
+    """Servicio de conversión de archivos - interfaz unificada"""
 
     def __init__(self, default_dpi: int = 200, default_format: str = "png"):
-        """初始化转换服务
+        """Inicializa el servicio de conversión
 
         Args:
-            default_dpi: 默认DPI
-            default_format: 默认输出格式
+            default_dpi: DPI predeterminado
+            default_format: Formato de salida predeterminado
         """
         self.default_dpi = default_dpi
         self.default_format = default_format
@@ -32,69 +32,69 @@ class FileConverterService:
         output_dir: Optional[str] = None,
         **kwargs
     ) -> Dict[str, Any]:
-        """转换文件为图片（自动识别文件类型）
+        """Convierte un archivo a imagen (detecta el tipo automáticamente)
 
-        这是唯一的对外接口，会自动识别文件类型并选择合适的转换器
+        Esta es la única interfaz pública; detecta el tipo de archivo y elige el convertidor adecuado
 
         Args:
-            file_path: 输入文件路径（支持PDF、图片、Word文档）
-            output_dir: 输出目录（如果为None，则自动创建）
-            **kwargs: 转换参数
-                - dpi: DPI设置（仅对PDF有效）
-                - format: 输出格式（png, jpg等）
-                - 其他转换器特定参数
+            file_path: Ruta del archivo de entrada (admite PDF, imágenes, documentos Word)
+            output_dir: Directorio de salida (si es None, se crea automáticamente)
+            **kwargs: Parámetros de conversión
+                - dpi: Configuración de DPI (solo válida para PDF)
+                - format: Formato de salida (png, jpg, etc.)
+                - Otros parámetros específicos del convertidor
 
         Returns:
-            Dict[str, Any]: 转换结果，包含:
-                - output_files: List[str] - 输出图片文件路径列表
-                - page_count: int - 页数/图片数
-                - metadata: Dict - 元数据信息
+            Dict[str, Any]: Resultado de la conversión, incluye:
+                - output_files: List[str] - Lista de rutas de archivos de imagen de salida
+                - page_count: int - Número de páginas/imágenes
+                - metadata: Dict - Información de metadatos
 
         Raises:
-            UnsupportedFormatError: 不支持的文件格式
-            ConversionFailedError: 转换失败
+            UnsupportedFormatError: Formato de archivo no admitido
+            ConversionFailedError: Conversión fallida
 
         Examples:
             >>> service = FileConverterService()
-            >>> # 转换PDF
+            >>> # Convertir PDF
             >>> result = await service.convert("document.pdf")
             >>> images = result["output_files"]
             >>> metadata = result["metadata"]
-            >>> # 转换图片
+            >>> # Convertir imagen
             >>> result = await service.convert("photo.jpg")
-            >>> # 转换Word文档
+            >>> # Convertir documento Word
             >>> result = await service.convert("report.docx")
-            >>> # 指定输出目录和DPI
+            >>> # Especificar directorio de salida y DPI
             >>> result = await service.convert("doc.pdf", output_dir="/tmp/output", dpi=300)
         """
-        # 验证文件存在
+        # Validar que el archivo exista
         if not os.path.exists(file_path):
-            raise FileNotFoundError(f"文件不存在: {file_path}")
+            raise FileNotFoundError(f"El archivo no existe: {file_path}")
 
-        # 确定输出目录
+        # Determinar el directorio de salida
         if output_dir is None:
-            # 自动创建输出目录
+            # Crear automáticamente el directorio de salida
             output_dir = os.path.join(
                 os.path.dirname(file_path),
                 f"converted_{Path(file_path).stem}"
             )
 
-        # 获取转换器（延迟导入避免循环）
+        # Obtener el convertidor (importación diferida para evitar ciclos)
         from app.utils.converters import ConverterFactory
         converter = ConverterFactory.get_converter(file_path)
 
-        logger.info(f"开始转换文件: {file_path}")
-        logger.info(f"使用转换器: {converter.name}")
-        logger.info(f"输出目录: {output_dir}")
+        logger.info(f"Iniciando conversión del archivo: {file_path}")
+        logger.info(f"Usando convertidor: {converter.name}")
+        logger.info(f"Directorio de salida: {output_dir}")
 
-        # 特殊处理Word文档（需要两步转换）
+        # Tratamiento especial de documentos Word (requiere conversión en dos pasos)
         if converter.name == "word_converter":
             return await self._convert_word_document(
                 file_path, output_dir, **kwargs
             )
 
-        # 直接转换（PDF或图片）
-        # 提取dpi和format参数，使用默认值
+        # Conversión directa (PDF o imagen)
+        # Extraer los parámetros dpi y format; usar valores predeterminados
         dpi = kwargs.pop("dpi", self.default_dpi)
         format = kwargs.pop("format", self.default_format)
 
@@ -103,14 +103,14 @@ class FileConverterService:
             output_dir,
             dpi=dpi,
             format=format,
-            **kwargs  # kwargs中已不包含dpi和format
+            **kwargs  # kwargs ya no incluye dpi ni format
         )
 
         output_files = result["output_files"]
         page_count = result["page_count"]
         metadata = result["metadata"]
 
-        logger.info(f"转换完成，生成 {len(output_files)} 个文件")
+        logger.info(f"Conversión completada, se generaron {len(output_files)} archivos")
 
         return {
             "output_files": output_files,
@@ -124,22 +124,22 @@ class FileConverterService:
         output_dir: str,
         **kwargs
     ) -> Dict[str, Any]:
-        """处理Word文档（先转PDF，再转图片）
+        """Procesa un documento Word (primero a PDF, luego a imagen)
 
         Args:
-            file_path: Word文档路径
-            output_dir: 输出目录
-            **kwargs: 转换参数
+            file_path: Ruta del documento Word
+            output_dir: Directorio de salida
+            **kwargs: Parámetros de conversión
 
         Returns:
-            Dict[str, Any]: 转换结果，包含:
-                - output_files: List[str] - 输出图片文件路径列表
-                - page_count: int - 页数/图片数
-                - metadata: Dict - 元数据信息
+            Dict[str, Any]: Resultado de la conversión, incluye:
+                - output_files: List[str] - Lista de rutas de archivos de imagen de salida
+                - page_count: int - Número de páginas/imágenes
+                - metadata: Dict - Información de metadatos
         """
         from app.utils.converters import WordConverter, PDFConverter
 
-        # 提取dpi和format参数，使用默认值
+        # Extraer los parámetros dpi y format; usar valores predeterminados
         dpi = kwargs.pop("dpi", self.default_dpi)
         format = kwargs.pop("format", self.default_format)
 
@@ -154,18 +154,18 @@ class FileConverterService:
             pdf_path, output_dir, dpi=dpi, format=format
         )
 
-        # 合并元数据
+        # Fusionar metadatos
         pdf_result["metadata"]["source_file"] = file_path
         pdf_result["metadata"]["converted_from"] = "word_document"
         pdf_result["metadata"]["word_metadata"] = word_result["metadata"]
 
-        # 删除临时PDF文件
+        # Eliminar el archivo PDF temporal
         try:
             if os.path.exists(pdf_path):
                 os.remove(pdf_path)
-                logger.info(f"已删除临时PDF文件: {pdf_path}")
+                logger.info(f"Archivo PDF temporal eliminado: {pdf_path}")
         except Exception as e:
-            logger.warning(f"删除临时PDF文件失败: {str(e)}")
+            logger.warning(f"Error al eliminar el archivo PDF temporal: {str(e)}")
 
         return {
             "output_files": pdf_result["output_files"],
@@ -174,13 +174,13 @@ class FileConverterService:
         }
 
     async def validate(self, file_path: str) -> bool:
-        """验证文件是否可以转换
+        """Valida si el archivo se puede convertir
 
         Args:
-            file_path: 文件路径
+            file_path: Ruta del archivo
 
         Returns:
-            bool: 是否可以转换
+            bool: Si se puede convertir
         """
         try:
             from app.utils.converters import ConverterFactory
@@ -191,23 +191,23 @@ class FileConverterService:
 
     @staticmethod
     def get_supported_formats() -> List[str]:
-        """获取所有支持的文件格式
+        """Obtiene todos los formatos de archivo admitidos
 
         Returns:
-            List[str]: 支持的文件扩展名列表
+            List[str]: Lista de extensiones de archivo admitidas
         """
         from app.utils.converters import ConverterFactory
         return ConverterFactory.get_supported_formats()
 
     @staticmethod
     def is_supported(file_path: str) -> bool:
-        """检查文件格式是否支持
+        """Comprueba si el formato de archivo está admitido
 
         Args:
-            file_path: 文件路径
+            file_path: Ruta del archivo
 
         Returns:
-            bool: 是否支持
+            bool: Si está admitido
         """
         try:
             from app.utils.converters import ConverterFactory
@@ -217,28 +217,28 @@ class FileConverterService:
             return False
 
 
-# 创建默认实例
+# Crear la instancia predeterminada
 default_converter = FileConverterService()
 
 
-# 便捷函数
+# Función de conveniencia
 async def convert_file(
     file_path: str,
     output_dir: Optional[str] = None,
     **kwargs
 ) -> Dict[str, Any]:
-    """转换文件为图片（便捷函数）
+    """Convierte un archivo a imagen (función de conveniencia)
 
     Args:
-        file_path: 输入文件路径
-        output_dir: 输出目录（可选）
-        **kwargs: 转换参数
+        file_path: Ruta del archivo de entrada
+        output_dir: Directorio de salida (opcional)
+        **kwargs: Parámetros de conversión
 
     Returns:
-        Dict[str, Any]: 转换结果，包含:
-            - output_files: List[str] - 输出图片文件路径列表
-            - page_count: int - 页数/图片数
-            - metadata: Dict - 元数据信息
+        Dict[str, Any]: Resultado de la conversión, incluye:
+            - output_files: List[str] - Lista de rutas de archivos de imagen de salida
+            - page_count: int - Número de páginas/imágenes
+            - metadata: Dict - Información de metadatos
 
     Examples:
         >>> from app.utils.converters import convert_file

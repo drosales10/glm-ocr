@@ -1,5 +1,5 @@
 """
-工具模块
+Módulo de utilidades
 """
 
 from app.utils.logger import logger

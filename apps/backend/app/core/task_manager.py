@@ -1,5 +1,5 @@
 """
-任务管理器实现
+Implementación del administrador de tareas
 """
 
 import asyncio
@@ -19,9 +19,9 @@ from app.utils.config import settings
 
 class TaskManager:
     """
-    任务管理器
+    Administrador de tareas
 
-    负责任务的提交、调度和监控
+    Responsable del envío, la programación y el monitoreo de tareas
     """
 
     def __init__(self, max_concurrent_tasks: int = 5, worker_count: int = 5):
@@ -31,7 +31,7 @@ class TaskManager:
         # Workers
         self.workers: List[Worker] = []
 
-        # 状态管理
+        # Gestión de estado
         self.is_running = False
         self._shutdown_event = asyncio.Event()
 
@@ -41,7 +41,7 @@ class TaskManager:
         )
 
     async def start(self):
-        """启动任务管理器"""
+        """Inicia el administrador de tareas"""
         if self.is_running:
             logger.warning("TaskManager is already running")
             return
@@ -51,10 +51,10 @@ class TaskManager:
         self.is_running = True
         self._shutdown_event.clear()
 
-        # 启动时恢复任务
+        # Recupera tareas al iniciar
         await self._recover_tasks()
 
-        # 启动Workers
+        # Iniciar Workers
         for i in range(self.worker_count):
             worker = Worker(
                 worker_id=f"worker-{i+1}",
@@ -63,17 +63,17 @@ class TaskManager:
             )
             self.workers.append(worker)
 
-            # 在后台启动worker
+            # Iniciar el worker en segundo plano
             asyncio.create_task(worker.start())
 
-        # 启动监控和清理协程
+        # Iniciar las corrutinas de monitoreo y limpieza
         asyncio.create_task(self._monitoring_loop())
         asyncio.create_task(self._cleanup_loop())
 
         logger.info(f"TaskManager started with {len(self.workers)} workers")
 
     async def stop(self):
-        """停止任务管理器"""
+        """Detiene el administrador de tareas"""
         if not self.is_running:
             return
 
@@ -82,7 +82,7 @@ class TaskManager:
         self.is_running = False
         self._shutdown_event.set()
 
-        # 停止所有Workers
+        # Detener todos los Workers
         for worker in self.workers:
             await worker.stop()
 
@@ -105,27 +105,27 @@ class TaskManager:
         retry_config: Optional[Dict[str, Any]] = None,
     ) -> str:
         """
-        提交新任务
+        Envía una nueva tarea
 
         Args:
-            document_id: 文档ID
-            original_filename: 原始文件名
-            file_type: 文件类型
-            file_size: 文件大小
-            file_path: 文件路径
-            processing_mode: 处理模式
-            priority: 优先级
-            ocr_config: OCR配置
-            output_format: 输出格式
-            retry_config: 重试配置
+            document_id: ID del documento
+            original_filename: Nombre original del archivo
+            file_type: Tipo de archivo
+            file_size: Tamaño del archivo
+            file_path: Ruta del archivo
+            processing_mode: Modo de procesamiento
+            priority: Prioridad
+            ocr_config: Configuración OCR
+            output_format: Formato de salida
+            retry_config: Configuración de reintentos
 
         Returns:
-            str: 任务ID
+            str: ID de la tarea
         """
         if not self.is_running:
             raise RuntimeError("TaskManager is not running")
         if task_id is None :
-            # 生成任务ID
+            # Generar el ID de la tarea
             task_id = str(uuid.uuid4())
 
         logger.info(
@@ -137,7 +137,7 @@ class TaskManager:
             async with AsyncSessionLocal() as db:
                 task_repo = TaskRepository(db)
 
-                # 创建任务
+                # Crea una tarea
                 task = await task_repo.create_task(
                     task_id=task_id,
                     document_id=document_id,
@@ -163,13 +163,13 @@ class TaskManager:
 
     async def get_task_status(self, task_id: str) -> Optional[Dict[str, Any]]:
         """
-        获取任务状态
+        Obtiene el estado de la tarea
 
         Args:
-            task_id: 任务ID
+            task_id: ID de la tarea
 
         Returns:
-            Optional[Dict]: 任务信息
+            Optional[Dict]: Información de la tarea
         """
         async with AsyncSessionLocal() as db:
             task_repo = TaskRepository(db)
@@ -197,13 +197,13 @@ class TaskManager:
 
     async def cancel_task(self, task_id: str) -> bool:
         """
-        取消任务
+        Cancela la tarea
 
         Args:
-            task_id: 任务ID
+            task_id: ID de la tarea
 
         Returns:
-            bool: 是否成功取消
+            bool: Si se canceló correctamente
         """
         try:
             async with AsyncSessionLocal() as db:
@@ -213,11 +213,11 @@ class TaskManager:
                 if not task:
                     return False
 
-                # 只能取消pending或processing的任务
+                # Solo se pueden cancelar tareas pending o processing
                 if task.status not in [TaskStatus.PENDING, TaskStatus.PROCESSING]:
                     return False
 
-                # 更新状态
+                # Actualizar el estado
                 await task_repo.update_task_status(
                     task_id=task_id, status=TaskStatus.CANCELLED
                 )
@@ -234,15 +234,15 @@ class TaskManager:
         self, status: Optional[str] = None, limit: int = 100, offset: int = 0
     ) -> List[Dict[str, Any]]:
         """
-        列出任务
+        Lista las tareas
 
         Args:
-            status: 过滤状态
-            limit: 返回数量限制
-            offset: 偏移量
+            status: Estado de filtro
+            limit: Límite de cantidad a devolver
+            offset: Desplazamiento (offset)
 
         Returns:
-            List[Dict]: 任务列表
+            List[Dict]: Lista de tareas
         """
         async with AsyncSessionLocal() as db:
             task_repo = TaskRepository(db)
@@ -267,20 +267,20 @@ class TaskManager:
             ]
 
     async def get_metrics(self) -> Dict[str, Any]:
-        """获取系统指标"""
+        """Obtiene las métricas del sistema"""
         async with AsyncSessionLocal() as db:
             task_repo = TaskRepository(db)
 
-            # 统计各状态任务数量
+            # Contar tareas por cada estado
             status_counts = await task_repo.count_tasks_by_status()
 
-            # 构造任务指标
+            # Construir las métricas de tareas
             tasks_metrics = {
                 "status_counts": status_counts,
                 "total": sum(status_counts.values()),
             }
 
-            # Worker统计
+            # Estadísticas de Workers
             worker_stats = []
             for worker in self.workers:
                 worker_stats.append(
@@ -294,7 +294,7 @@ class TaskManager:
                     }
                 )
 
-            # 构造Worker指标
+            # Construir las métricas de Workers
             workers_metrics = {
                 "total": len(self.workers),
                 "active": sum(1 for w in self.workers if w.is_running),
@@ -310,7 +310,7 @@ class TaskManager:
             }
 
     async def _recover_tasks(self):
-        """启动时恢复任务"""
+        """Recupera tareas al iniciar"""
         logger.info("Recovering tasks on startup...")
 
         try:
@@ -327,14 +327,14 @@ class TaskManager:
             logger.error(f"Task recovery failed: {e}")
 
     async def _monitoring_loop(self):
-        """监控协程"""
+        """Corrutina de monitoreo"""
         logger.info("Monitoring loop started")
 
         while not self._shutdown_event.is_set():
             try:
                 await asyncio.sleep(settings.METRICS_INTERVAL)
 
-                # 恢复过期锁
+                # Recuperar bloqueos expirados
                 async with AsyncSessionLocal() as db:
                     lock_manager = LockManager(db)
                     recovered = await lock_manager.recover_expired_locks()
@@ -349,14 +349,14 @@ class TaskManager:
         logger.info("Monitoring loop stopped")
 
     async def _cleanup_loop(self):
-        """清理协程"""
+        """Corrutina de limpieza"""
         logger.info("Cleanup loop started")
 
         while not self._shutdown_event.is_set():
             try:
                 await asyncio.sleep(settings.CLEANUP_INTERVAL)
 
-                # 清理旧任务
+                # Limpia tareas antiguas
                 async with AsyncSessionLocal() as db:
                     task_repo = TaskRepository(db)
                     deleted = await task_repo.cleanup_old_tasks(
@@ -376,12 +376,12 @@ class TaskManager:
         )
 
 
-# 全局任务管理器实例
+# Instancia global del administrador de tareas
 _task_manager: Optional[TaskManager] = None
 
 
 def get_task_manager() -> TaskManager:
-    """获取任务管理器实例"""
+    """Obtiene la instancia del administrador de tareas"""
     global _task_manager
     if _task_manager is None:
         _task_manager = TaskManager(
@@ -392,14 +392,14 @@ def get_task_manager() -> TaskManager:
 
 
 async def init_task_system():
-    """初始化任务系统"""
+    """Inicializa el sistema de tareas"""
     task_manager = get_task_manager()
     await task_manager.start()
     logger.info("Task system initialized")
 
 
 async def shutdown_task_system():
-    """关闭任务系统"""
+    """Cierra el sistema de tareas"""
     global _task_manager
     if _task_manager:
         await _task_manager.stop()

@@ -1,5 +1,5 @@
 """
-任务Repository
+Repository de tareas
 """
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta, UTC
@@ -12,7 +12,7 @@ from app.repository.base import BaseRepository
 
 
 class TaskRepository(BaseRepository[Task]):
-    """任务Repository - 支持分布式锁和重试"""
+    """Repository de tareas - admite bloqueos distribuidos y reintentos"""
 
     def __init__(self, session: AsyncSession):
         super().__init__(session, Task)
@@ -31,7 +31,7 @@ class TaskRepository(BaseRepository[Task]):
         output_format: str = "markdown",
         retry_config: Optional[Dict[str, Any]] = None
     ) -> Task:
-        """创建任务"""
+        """Crea una tarea"""
         task_data = {
             "task_id": task_id,
             "document_id": document_id,
@@ -47,7 +47,7 @@ class TaskRepository(BaseRepository[Task]):
             "progress": 0.0
         }
 
-        # 添加重试配置
+        # Añadir configuración de reintentos
         if retry_config:
             task_data["max_retries"] = retry_config.get("max_retries", 3)
             task_data["retry_delay"] = retry_config.get("base_delay", 60)
@@ -55,7 +55,7 @@ class TaskRepository(BaseRepository[Task]):
         return await self.create(**task_data)
 
     async def get_by_task_id(self, task_id: str) -> Optional[Task]:
-        """根据task_id获取任务"""
+        """Obtiene la tarea por task_id"""
         stmt = select(Task).where(Task.task_id == task_id)
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
@@ -67,19 +67,19 @@ class TaskRepository(BaseRepository[Task]):
         lock_timeout: int = 3600
     ) -> Optional[Task]:
         """
-        尝试获取任务锁（原子操作）
+        Intenta adquirir el bloqueo de la tarea (operación atómica)
 
         Args:
-            task_id: 任务ID
+            task_id: ID de la tarea
             worker_id: Worker ID
-            lock_timeout: 锁超时时间（秒）
+            lock_timeout: Tiempo de espera del bloqueo (segundos)
 
         Returns:
-            Optional[Task]: 成功返回任务对象，失败返回None
+            Optional[Task]: Devuelve el objeto tarea si tiene éxito; None si falla
         """
         lock_expires_at = datetime.now(UTC) + timedelta(seconds=lock_timeout)
 
-        # 使用UPDATE ... WHERE语句原子性获取锁
+        # Usar UPDATE ... WHERE para adquirir el bloqueo de forma atómica
         stmt = (
             update(Task)
             .where(
@@ -87,7 +87,7 @@ class TaskRepository(BaseRepository[Task]):
                     Task.task_id == task_id,
                     or_(
                         Task.status == TaskStatus.PENDING,
-                        # 锁已过期的PROCESSING任务也可以被重新获取
+                        # Las tareas PROCESSING con bloqueo expirado también se pueden volver a adquirir
                         and_(
                             Task.status == TaskStatus.PROCESSING,
                             Task.lock_expires_at < datetime.now(UTC)
@@ -108,7 +108,7 @@ class TaskRepository(BaseRepository[Task]):
         task = result.scalar_one_or_none()
 
         if task:
-            # 刷新任务对象
+            # Refrescar el objeto tarea
             await self.session.refresh(task)
 
         return task
@@ -120,15 +120,15 @@ class TaskRepository(BaseRepository[Task]):
         lock_timeout: int = 3600
     ) -> bool:
         """
-        续期任务锁
+        Renueva el bloqueo de la tarea
 
         Args:
-            task_id: 任务ID
+            task_id: ID de la tarea
             worker_id: Worker ID
-            lock_timeout: 新的锁超时时间（秒）
+            lock_timeout: Nuevo tiempo de espera del bloqueo (segundos)
 
         Returns:
-            bool: 是否成功续期
+            bool: Si se renovó correctamente
         """
         new_expires_at = datetime.now(UTC) + timedelta(seconds=lock_timeout)
 
@@ -155,16 +155,16 @@ class TaskRepository(BaseRepository[Task]):
         error_message: Optional[str] = None
     ) -> bool:
         """
-        释放任务锁
+        Libera el bloqueo de la tarea
 
         Args:
-            task_id: 任务ID
+            task_id: ID de la tarea
             worker_id: Worker ID
-            status: 最终状态
-            error_message: 错误信息（如果有）
+            status: Estado final
+            error_message: Mensaje de error (si existe)
 
         Returns:
-            bool: 是否成功释放
+            bool: Si se liberó correctamente
         """
         update_data = {
             "status": status,
@@ -194,7 +194,7 @@ class TaskRepository(BaseRepository[Task]):
         return result.rowcount > 0
 
     async def get_expired_locks(self, limit: int = 100) -> List[Task]:
-        """获取锁已过期的任务"""
+        """Obtiene tareas con bloqueo expirado"""
         stmt = (
             select(Task)
             .where(
@@ -216,14 +216,14 @@ class TaskRepository(BaseRepository[Task]):
         error_message: str
     ) -> Optional[Task]:
         """
-        重置任务以便重试
+        Restablece la tarea para reintentarla
 
         Args:
-            task_id: 任务ID
-            error_message: 错误信息
+            task_id: ID de la tarea
+            error_message: Mensaje de error
 
         Returns:
-            Optional[Task]: 重置后的任务
+            Optional[Task]: Tarea restablecida
         """
         task = await self.get_by_task_id(task_id)
         if not task or not task.can_retry:
@@ -239,9 +239,9 @@ class TaskRepository(BaseRepository[Task]):
                 retry_count=task.retry_count + 1,
                 last_retry_at=datetime.now(UTC),
                 error_message=error_message,
-                started_at=None,  # 重置开始时间
+                started_at=None,  # Restablecer la hora de inicio
                 current_step=None,
-                progress=0.0  # 重置进度
+                progress=0.0  # Restablecer el progreso
             )
             .returning(Task)
         )
@@ -253,7 +253,7 @@ class TaskRepository(BaseRepository[Task]):
         self,
         limit: int = 10
     ) -> List[Task]:
-        """获取待处理的任务（按优先级排序）"""
+        """Obtiene tareas pendientes (ordenadas por prioridad)"""
         stmt = (
             select(Task)
             .where(Task.status == TaskStatus.PENDING)
@@ -265,7 +265,7 @@ class TaskRepository(BaseRepository[Task]):
         return list(result.scalars().all())
 
     async def get_processing_tasks(self) -> List[Task]:
-        """获取正在处理的任务"""
+        """Obtiene las tareas en procesamiento"""
         stmt = (
             select(Task)
             .where(Task.status == TaskStatus.PROCESSING)
@@ -285,7 +285,7 @@ class TaskRepository(BaseRepository[Task]):
         result_file_path: Optional[str] = None,
         result: Optional[Dict[str, Any]] = None
     ) -> Optional[Task]:
-        """更新任务状态"""
+        """Actualiza el estado de la tarea"""
         update_data = {"status": status}
 
         if progress is not None:
@@ -303,7 +303,7 @@ class TaskRepository(BaseRepository[Task]):
         if result is not None:
             update_data["result"] = result
 
-        # 设置时间戳
+        # Establecer marcas de tiempo
         if status == TaskStatus.PROCESSING:
             update_data["started_at"] = datetime.now(UTC)
         elif status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]:
@@ -330,7 +330,7 @@ class TaskRepository(BaseRepository[Task]):
         progress: float,
         current_step: Optional[str] = None
     ) -> Optional[Task]:
-        """更新任务进度"""
+        """Actualiza el progreso de la tarea"""
         update_data = {"progress": min(max(progress, 0.0), 100.0)}
 
         if current_step:
@@ -359,7 +359,7 @@ class TaskRepository(BaseRepository[Task]):
         skip: int = 0,
         limit: int = 100
     ) -> List[Task]:
-        """根据条件查询任务列表"""
+        """Consulta la lista de tareas según condiciones"""
         stmt = select(Task)
 
         conditions = []
@@ -379,7 +379,7 @@ class TaskRepository(BaseRepository[Task]):
         return list(result.scalars().all())
 
     async def count_tasks_by_status(self) -> Dict[str, int]:
-        """按状态统计任务数量"""
+        """Cuenta tareas por estado"""
         stmt = (
             select(Task.status, func.count(Task.id))
             .group_by(Task.status)
@@ -393,7 +393,7 @@ class TaskRepository(BaseRepository[Task]):
         days: int = 30,
         statuses: Optional[List[str]] = None
     ) -> int:
-        """清理旧任务"""
+        """Limpia tareas antiguas"""
         from sqlalchemy import delete
 
         if statuses is None:

@@ -1,5 +1,5 @@
 """
-PDF转换器
+Convertidor de PDF
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from app.utils.logger import logger
 
 
 class PDFConverter(BaseConverter):
-    """PDF转图片转换器"""
+    """Convertidor de PDF a imagen"""
 
     name = "pdf_converter"
 
@@ -31,28 +31,28 @@ class PDFConverter(BaseConverter):
         format: str = "png",
         **kwargs
     ) -> Dict[str, Any]:
-        """将PDF转换为图片
+        """Convierte un PDF a imágenes
 
         Args:
-            file_path: PDF文件路径
-            output_dir: 输出目录
-            dpi: DPI设置
-            format: 输出格式 (png, jpg)
-            **kwargs: 其他参数
+            file_path: Ruta del archivo PDF
+            output_dir: Directorio de salida
+            dpi: Configuración de DPI
+            format: Formato de salida (png, jpg)
+            **kwargs: Otros parámetros
 
         Returns:
-            Dict: 转换结果
+            Dict: Resultado de la conversión
         """
         self.ensure_output_dir(output_dir)
 
         output_files = []
 
         try:
-            # 打开PDF文件
+            # Abrir el archivo PDF
             pdf_document = fitz.open(file_path)
             page_count = pdf_document.page_count
 
-            # 提取PDF元数据
+            # Extraer metadatos del PDF
             metadata = self.get_metadata(file_path)
             metadata.update({
                 "title": pdf_document.metadata.get("title", ""),
@@ -67,29 +67,29 @@ class PDFConverter(BaseConverter):
                 "dpi": dpi,
             })
 
-            # 设置缩放比例（基于DPI）
+            # Establecer la escala (basada en DPI)
             zoom = dpi / 72.0
             mat = fitz.Matrix(zoom, zoom)
 
-            # 存储首页图片尺寸信息
+            # Almacenar las dimensiones de la primera página
             target_width = None
             target_height = None
 
-            # 转换每一页
+            # Convertir cada página
             for page_num in range(page_count):
-                # 报告进度
+                # Informar del progreso
                 progress = (page_num / page_count) * 100
-                if page_num % 5 == 0:  # 每5页报告一次
+                if page_num % 5 == 0:  # Informar cada 5 páginas
                     logger.info(
-                        f"PDF转换进度: {progress:.1f}% ({page_num + 1}/{page_count})"
+                        f"Progreso de conversión PDF: {progress:.1f}% ({page_num + 1}/{page_count})"
                     )
 
                 page = pdf_document[page_num]
 
-                # 渲染页面为图片
+                # Renderizar la página como imagen
                 pix = page.get_pixmap(matrix=mat)
 
-                # 如果是第一页，记录尺寸信息并设为目标尺寸
+                # Si es la primera página, registrar las dimensiones y usarlas como tamaño objetivo
                 if page_num == 0:
                     target_width = pix.width
                     target_height = pix.height
@@ -100,21 +100,21 @@ class PDFConverter(BaseConverter):
                     }
                     metadata["width"] = target_width
                     metadata["height"] = target_height
-                    logger.info(f"首页图片尺寸: {pix.width}x{pix.height} (DPI: {dpi})")
+                    logger.info(f"Dimensiones de la primera página: {pix.width}x{pix.height} (DPI: {dpi})")
                 else:
-                    # 检查当前页面转换后的尺寸是否与首页一致
+                    # Comprobar si las dimensiones de la página actual coinciden con la primera
                     if pix.width != target_width or pix.height != target_height:
                         logger.warning(
-                            f"第{page_num + 1}页尺寸({pix.width}x{pix.height})与首页不一致({target_width}x{target_height})"
+                            f"Las dimensiones de la página {page_num + 1} ({pix.width}x{pix.height}) no coinciden con la primera página ({target_width}x{target_height})"
                         )
-                        # 统一尺寸：将当前页面resize为首页尺寸
+                        # Unificar tamaño: redimensionar la página actual al tamaño de la primera
                         img_data = pix.tobytes("png")
                         pil_image = Image.open(io.BytesIO(img_data))
                         resized_image = pil_image.resize(
                             (target_width, target_height), Image.Resampling.LANCZOS
                         )
 
-                        # 保存调整后的图片
+                        # Guardar la imagen ajustada
                         output_filename = f"page_{page_num + 1:04d}.{format}"
                         output_path = os.path.join(output_dir, output_filename)
 
@@ -123,16 +123,16 @@ class PDFConverter(BaseConverter):
                         elif format == "jpg":
                             resized_image.save(output_path, "JPEG", quality=95)
                         else:
-                            raise ValueError(f"不支持的图片格式: {format}")
+                            raise ValueError(f"Formato de imagen no admitido: {format}")
 
                         logger.info(
-                            f"第{page_num + 1}页已调整为统一尺寸: {target_width}x{target_height}"
+                            f"Página {page_num + 1} ajustada al tamaño unificado: {target_width}x{target_height}"
                         )
 
                         output_files.append(output_path)
-                        continue  # 跳过常规保存流程
+                        continue  # Omitir el flujo normal de guardado
 
-                # 保存图片
+                # Guardar la imagen
                 output_filename = f"page_{page_num + 1:04d}.{format}"
                 output_path = os.path.join(output_dir, output_filename)
 
@@ -141,7 +141,7 @@ class PDFConverter(BaseConverter):
                 elif format == "jpg":
                     pix.save(output_path, jpeg=True)
                 else:
-                    raise ValueError(f"不支持的图片格式: {format}")
+                    raise ValueError(f"Formato de imagen no admitido: {format}")
 
                 output_files.append(output_path)
 
@@ -154,47 +154,47 @@ class PDFConverter(BaseConverter):
             }
 
         except Exception as e:
-            logger.error(f"PDF转换失败: {str(e)}")
-            raise ConversionFailedError(f"PDF转换失败: {str(e)}") from e
+            logger.error(f"Error al convertir el PDF: {str(e)}")
+            raise ConversionFailedError(f"Error al convertir el PDF: {str(e)}") from e
 
     async def validate(self, file_path: str) -> bool:
-        """验证PDF文件
+        """Valida el archivo PDF
 
         Args:
-            file_path: PDF文件路径
+            file_path: Ruta del archivo PDF
 
         Returns:
-            bool: 是否有效
+            bool: Si es válido
         """
         try:
-            # 检查文件是否存在
+            # Comprobar si el archivo existe
             if not os.path.exists(file_path):
-                logger.error(f"PDF文件不存在: {file_path}")
+                logger.error(f"El archivo PDF no existe: {file_path}")
                 return False
 
-            # 检查文件扩展名
+            # Comprobar la extensión del archivo
             if not file_path.lower().endswith(".pdf"):
-                logger.error(f"不是PDF文件: {file_path}")
+                logger.error(f"No es un archivo PDF: {file_path}")
                 return False
 
-            # 检查文件大小
+            # Comprobar el tamaño del archivo
             file_size = os.path.getsize(file_path)
             if file_size == 0:
-                logger.error("PDF文件为空")
+                logger.error("El archivo PDF está vacío")
                 return False
 
-            # 尝试打开PDF文件验证
+            # Intentar abrir el PDF para validarlo
             pdf_document = fitz.open(file_path)
             page_count = pdf_document.page_count
             pdf_document.close()
 
             if page_count == 0:
-                logger.error("PDF文件没有页面")
+                logger.error("El archivo PDF no tiene páginas")
                 return False
 
-            logger.info(f"PDF文件验证通过，共 {page_count} 页")
+            logger.info(f"Validación de PDF correcta, {page_count} páginas")
             return True
 
         except Exception as e:
-            logger.error(f"PDF文件验证失败: {str(e)}")
+            logger.error(f"Error al validar el archivo PDF: {str(e)}")
             return False

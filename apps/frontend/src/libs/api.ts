@@ -2,16 +2,16 @@ import axios from 'axios'
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
 
-// 创建 axios 实例
+// Crear instancia de axios
 const api = axios.create({
 	baseURL: BASE_URL,
-	timeout: 60000 // 60秒超时
+	timeout: 60000 // Timeout de 60 segundos
 })
 
-// 请求拦截器
+// Interceptor de peticiones
 api.interceptors.request.use(
 	config => {
-		// 可以在这里添加 token 等认证信息
+		// Aquí se puede añadir token u otra información de autenticación
 		return config
 	},
 	error => {
@@ -19,28 +19,28 @@ api.interceptors.request.use(
 	}
 )
 
-// 响应拦截器
+// Interceptor de respuestas
 api.interceptors.response.use(
 	response => {
 		return response
 	},
 	error => {
-		// 统一错误处理
+		// Manejo unificado de errores
 		if (error.response) {
-			// 服务器返回了错误状态码
+			// El servidor devolvió un código de estado de error
 			console.error('API Error:', error.response.data)
 		} else if (error.request) {
-			// 请求已发出但没有收到响应
+			// La petición se envió pero no se recibió respuesta
 			console.error('Network Error:', error.request)
 		} else {
-			// 其他错误
+			// Otros errores
 			console.error('Error:', error.message)
 		}
 		return Promise.reject(error)
 	}
 )
 
-// API 统一响应格式
+// Formato unificado de respuesta de la API
 export interface ApiResponse<T> {
 	success: boolean
 	data: T
@@ -48,7 +48,7 @@ export interface ApiResponse<T> {
 	error?: string | null
 }
 
-// 上传接口返回的 data 结构
+// Estructura de data devuelta por el endpoint de subida
 export interface UploadTaskData {
 	task_id: string | number
 	document_id: string
@@ -68,7 +68,7 @@ export interface UploadTaskParams {
 
 export type TaskStatus = 'pending' | 'processing' | 'completed' | 'failed'
 
-// 轮询接口返回的 data 结构
+// Estructura de data devuelta por el endpoint de polling
 export interface TaskStatusData {
 	task_id: string | number
 	document_id: string
@@ -118,8 +118,8 @@ export interface TaskStatusData {
 export interface TaskStatusResponse extends ApiResponse<TaskStatusData> {}
 
 /**
- * 上传文件并创建 OCR 任务
- * @param params 上传参数
+ * Sube un archivo y crea una tarea OCR
+ * @param params Parámetros de subida
  * @returns Promise<UploadTaskData>
  */
 export async function uploadTask(params: UploadTaskParams): Promise<UploadTaskData> {
@@ -133,22 +133,22 @@ export async function uploadTask(params: UploadTaskParams): Promise<UploadTaskDa
 	const response = await api.post<UploadTaskResponse>('/tasks/upload', formData)
 
 	if (!response.data.success) {
-		throw new Error(response.data.message || '上传失败')
+		throw new Error(response.data.message || 'Error al subir el archivo')
 	}
 
 	return response.data.data
 }
 
 /**
- * 查询任务状态
- * @param taskId 任务 ID
+ * Consulta el estado de una tarea
+ * @param taskId ID de la tarea
  * @returns Promise<TaskStatusData>
  */
 export async function getTaskStatus(taskId: string | number): Promise<TaskStatusData> {
 	const response = await api.get<TaskStatusResponse>(`/tasks/${taskId}`)
 
 	if (!response.data.success) {
-		throw new Error(response.data.message || '查询任务状态失败')
+		throw new Error(response.data.message || 'Error al consultar el estado de la tarea')
 	}
 
 	return response.data.data

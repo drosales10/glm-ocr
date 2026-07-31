@@ -34,7 +34,7 @@ export function useFileBlockInteraction({
 				return
 			}
 
-			// 鼠标移动到复制按钮上时，不要清空高亮
+			// Si el ratón está sobre el botón de copiar, no vaciar el resaltado
 			if ((e.target as HTMLElement).closest(COPY_BUTTON_SELECTOR)) {
 				return
 			}
@@ -87,7 +87,7 @@ export function useFileBlockInteraction({
 				return
 			}
 
-			// 鼠标移动到复制按钮上时，不要清空高亮
+			// Si el ratón está sobre el botón de copiar, no vaciar el resaltado
 			if ((e.target as HTMLElement).closest(COPY_BUTTON_SELECTOR)) {
 				return
 			}
@@ -131,7 +131,7 @@ export function useFileBlockInteraction({
 
 	const handleMouseLeave = useCallback(
 		(e: React.MouseEvent<HTMLDivElement>) => {
-			// 从父元素移动到子元素（或其后代）不算真正离开
+			// Moverse del padre a un hijo (o descendiente) no cuenta como salida real
 			const related = e.relatedTarget
 			if (related instanceof Node && e.currentTarget.contains(related)) return
 			setHoveredBlockId(null)

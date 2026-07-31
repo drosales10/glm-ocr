@@ -1,5 +1,5 @@
 """
-通用的Pydantic Schema
+Esquemas Pydantic comunes
 """
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any, List, TypeVar, Generic
@@ -10,10 +10,10 @@ T = TypeVar('T')
 
 
 class ErrorResponse(BaseModel):
-    """错误响应"""
-    error: str = Field(..., description="错误类型")
-    message: str = Field(..., description="错误消息")
-    detail: Optional[str] = Field(None, description="详细错误信息")
+    """Respuesta de error"""
+    error: str = Field(..., description="Tipo de error")
+    message: str = Field(..., description="Mensaje de error")
+    detail: Optional[str] = Field(None, description="Información detallada del error")
 
     class Config:
         json_schema_extra = {
@@ -26,14 +26,14 @@ class ErrorResponse(BaseModel):
 
 
 class MessageResponse(BaseModel):
-    """通用消息响应"""
+    """Respuesta de mensaje genérica"""
     message: str
     success: bool = True
     data: Optional[Dict[str, Any]] = None
 
 
 class PaginatedResponse(BaseModel, Generic[T]):
-    """分页响应"""
+    """Respuesta paginada"""
     items: List[T]
     total: int
     page: int
@@ -42,7 +42,7 @@ class PaginatedResponse(BaseModel, Generic[T]):
 
 
 class ProgressUpdate(BaseModel):
-    """进度更新"""
+    """Actualización de progreso"""
     task_id: str
     step_name: str
     progress: float

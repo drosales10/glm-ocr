@@ -1,5 +1,5 @@
 """
-核心模块
+Módulo principal
 """
 
 from app.core.task_manager import TaskManager, get_task_manager

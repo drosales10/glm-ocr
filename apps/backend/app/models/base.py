@@ -1,5 +1,5 @@
 """
-数据库基础模型
+Modelos base de la base de datos
 """
 from datetime import datetime
 from typing import Any
@@ -9,12 +9,12 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class Base(DeclarativeBase):
-    """所有模型的基类"""
+    """Clase base de todos los modelos"""
     pass
 
 
 class TimestampMixin:
-    """时间戳混入类"""
+    """Clase mixin de marcas de tiempo"""
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

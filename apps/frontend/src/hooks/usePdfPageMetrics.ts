@@ -9,7 +9,7 @@ interface PageMetrics {
 	offsetY: number
 }
 
-// 获取 PDF 页面 metrics 用于定位高亮层
+// Obtener métricas de página PDF para posicionar la capa de resaltado
 export function usePdfPageMetrics(
 	viewerRef: RefObject<HTMLDivElement>,
 	pdfUrl: string | null,

@@ -1,5 +1,5 @@
 """
-任务恢复处理器
+Procesador de recuperación de tareas
 """
 from typing import Dict, Any
 
@@ -9,17 +9,17 @@ from app.utils.logger import logger
 
 
 class RecoveryHandler:
-    """任务恢复处理器"""
+    """Procesador de recuperación de tareas"""
 
     def __init__(self, task_repo: TaskRepository):
         self.task_repo = task_repo
 
     async def recover_on_startup(self) -> Dict[str, int]:
         """
-        系统启动时恢复任务
+        Recupera tareas al iniciar el sistema
 
         Returns:
-            Dict[str, int]: 恢复统计信息
+            Dict[str, int]: Estadísticas de recuperación
         """
         logger.info("Starting task recovery on startup")
 
@@ -30,7 +30,7 @@ class RecoveryHandler:
         }
 
         try:
-            # 恢复锁已过期的任务
+            # Recupera tareas con bloqueo expirado
             expired_count = await self._recover_expired_locks()
             stats["expired_locks_recovered"] = expired_count
 
@@ -45,7 +45,7 @@ class RecoveryHandler:
             return stats
 
     async def _recover_expired_locks(self) -> int:
-        """恢复锁已过期的任务"""
+        """Recupera tareas con bloqueo expirado"""
         expired_tasks = await self.task_repo.get_expired_locks(limit=1000)
 
         recovered_count = 0
@@ -62,12 +62,12 @@ class RecoveryHandler:
         return recovered_count
 
     async def _recover_single_task(self, task: Task, reason: str):
-        """恢复单个任务"""
+        """Recupera una sola tarea"""
         logger.info(f"Recovering task {task.task_id}, reason: {reason}")
 
-        # 检查是否可以重试
+        # Comprobar si se puede reintentar
         if not task.can_retry:
-            # 超过最大重试次数，标记为死信
+            # Se superó el número máximo de reintentos; marcar como carta muerta
             await self.task_repo.update_task_status(
                 task_id=task.task_id,
                 status=TaskStatus.DEAD_LETTER,
@@ -76,14 +76,14 @@ class RecoveryHandler:
             logger.warning(f"Task {task.task_id} marked as dead letter (max retries exceeded)")
             return
 
-        # 重置任务为PENDING状态
+        # Restablecer la tarea al estado PENDING
         await self.task_repo.update_task_status(
             task_id=task.task_id,
             status=TaskStatus.PENDING,
             error_message=f"Task recovered: {reason}"
         )
 
-        # 重置为初始状态
+        # Restablecer al estado inicial
         from sqlalchemy import update
 
         stmt = (

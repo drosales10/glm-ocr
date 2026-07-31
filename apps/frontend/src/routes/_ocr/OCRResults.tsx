@@ -17,22 +17,22 @@ interface OCRResultsProps {
 export function OCRResults({ result, fileName }: OCRResultsProps) {
 	const setBlocks = useOcrStore(s => s.setBlocks)
 
-	// 从真实数据中获取 layout 和 images，如果没有则使用 mock 数据
+	// Obtener layout e images de los datos reales; si no hay, usar datos mock
 	const layout = useMemo(() => result?.response?.layout || [], [result?.response?.layout])
 	const images = useMemo(() => result?.response?.images || {}, [result?.response?.images])
 
 
-	// 获取 PDF 单页高度	
+	// Obtener la altura de una página PDF
 	const pageHeight = result?.response?.metadata?.height ?? 2339
 
-	// 将 layout 转换为 blocks 格式（过滤掉只有 # 的内容，保留图片）
+	// Convertir layout al formato de blocks (filtrar contenido que solo tiene #; conservar imágenes)
 	const blocks = useMemo(() => {
 		if (result?.status !== 'completed') {
 			return []
 		}
 		return layout
 			.filter((b: any) => {
-				// 过滤掉空内容或只有 # 的内容
+				// Filtrar contenido vacío o que solo contiene #
 				if (!b.block_content || b.block_content.trim() === '') {
 					return false
 				}
@@ -41,7 +41,7 @@ export function OCRResults({ result, fileName }: OCRResultsProps) {
 			.map((b: any, index: number) => {
 				const blockContent = b.block_content.trim()
 
-				// 处理 bbox 坐标 - 始终使用相对坐标（每页内的坐标）
+				// Procesar coordenadas bbox: siempre usar coordenadas relativas (dentro de cada página)
 				let bbox: [number, number, number, number] | null = null
 				let width = 0
 				let height = 0
@@ -50,7 +50,7 @@ export function OCRResults({ result, fileName }: OCRResultsProps) {
 					width = x2 - x1
 					height = y2 - y1
 
-					// 始终使用相对坐标（每页内的坐标）
+					// Siempre usar coordenadas relativas (dentro de cada página)
 					bbox = [x1, y1, x2, y2]
 				}
 
@@ -59,14 +59,14 @@ export function OCRResults({ result, fileName }: OCRResultsProps) {
 					content: blockContent,
 					bbox,
 					pageIndex: b.page_index ?? 1,
-					isImage: blockContent.startsWith('![]('), // 标记是否为图片
+					isImage: blockContent.startsWith('![]('), // Marcar si es una imagen
 					width: width,
 					height: height
 				}
 			})
 	}, [layout, images, pageHeight, result?.status])
 
-	// 将 blocks 设置到 store
+	// Guardar los blocks en el store
 	useEffect(() => {
 		if (blocks.length > 0) {
 			setBlocks(blocks)
@@ -76,7 +76,7 @@ export function OCRResults({ result, fileName }: OCRResultsProps) {
 	const handleCopy = () => {
 		if (!result?.response?.full_markdown) return
 		navigator.clipboard.writeText(result.response.full_markdown)
-		toast.success('复制成功')
+		toast.success('Copiado correctamente')
 	}
 
 	const handleDownload = () => {
@@ -88,7 +88,7 @@ export function OCRResults({ result, fileName }: OCRResultsProps) {
 		a.download = `${fileName || 'result'}.md`
 		a.click()
 		URL.revokeObjectURL(url)
-		toast.success('下载成功')
+		toast.success('Descarga completada')
 	}
 
 	const response = result?.response
@@ -98,7 +98,7 @@ export function OCRResults({ result, fileName }: OCRResultsProps) {
 	return (
 		<div className='h-screen flex flex-col bg-white border-l border-border'>
 			<Tabs defaultValue='markdown' className='flex-1 flex flex-col overflow-hidden'>
-				{/* 固定在顶部的 TabsList */}
+				{/* TabsList fijo en la parte superior */}
 				<div className='px-4 pt-4 pb-0 bg-white sticky top-0 z-10 flex items-center justify-between'>
 					<TabsList className='grid grid-cols-2'>
 						<TabsTrigger value='markdown' className='cursor-pointer'>
@@ -116,34 +116,34 @@ export function OCRResults({ result, fileName }: OCRResultsProps) {
 					</div>}
 				</div>
 
-				{/* 可滚动的内容区域 */}
+				{/* Área de contenido con scroll */}
 				<div className='flex-1 overflow-hidden'>
 					<TabsContent value='markdown' className='h-full m-0 mt-0'>
-						{/* 解析中状态 */}
+						{/* Estado de procesamiento */}
 						{status === 'pending' || status === 'processing' ? (
 							<div className='h-full flex items-center justify-center'>
 								<div className='text-center'>
 									<div className='inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4'></div>
 									<p className='text-gray-500 dark:text-gray-400'>
-										正在解析中...
+										Procesando...
 									</p>
 								</div>
 							</div>
 						) : blocks.length > 0 && status === 'completed' ? (
-							// 解析成功，显示结果
+							// Procesamiento exitoso
 							<MarkdownPreview />
 						) : status === 'completed' ? (
-							// 解析完成但没有内容
+							// Completado sin contenido
 							<div className='h-full flex items-center justify-center'>
 								<div className='p-4 rounded-lg text-center text-gray-500 dark:text-gray-400'>
-									<p>暂无 Markdown 内容</p>
+									<p>No hay contenido Markdown</p>
 								</div>
 							</div>
 						) : status === 'failed' ? (
-							// 解析失败
+							// Fallo del procesamiento
 							<div className='h-full flex items-center justify-center'>
 								<div className='p-4 rounded-lg text-center text-red-500 dark:text-red-400'>
-									<p>解析失败</p>
+									<p>Error al procesar</p>
 									{error_message && (
 										<p className='text-sm mt-2 text-gray-500 dark:text-gray-400'>
 											{error_message}
@@ -152,10 +152,10 @@ export function OCRResults({ result, fileName }: OCRResultsProps) {
 								</div>
 							</div>
 						) : (
-							// 未上传文件
+							// Sin archivo
 							<div className='h-full flex items-center justify-center'>
 								<div className='p-4 rounded-lg text-center text-gray-500 dark:text-gray-400'>
-									<p>请先上传文件并等待处理完成</p>
+									<p>Sube un archivo y espera a que termine el procesamiento</p>
 								</div>
 							</div>
 						)}
@@ -170,7 +170,7 @@ export function OCRResults({ result, fileName }: OCRResultsProps) {
 							) : (
 								<div className='h-full flex items-center justify-center'>
 									<div className='p-4 rounded-lg text-center text-gray-500 dark:text-gray-400'>
-										<p>暂无数据</p>
+										<p>Sin datos</p>
 									</div>
 								</div>
 							)}

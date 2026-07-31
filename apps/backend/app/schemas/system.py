@@ -1,12 +1,12 @@
 """
-系统相关的Pydantic Schema
+Esquemas Pydantic relacionados con el sistema
 """
 from pydantic import BaseModel, Field
 from typing import Dict, Any, List, Optional
 
 
 class WorkerStats(BaseModel):
-    """Worker统计信息"""
+    """Estadísticas del Worker"""
     worker_id: str
     is_running: bool
     current_task: Optional[str]
@@ -16,13 +16,13 @@ class WorkerStats(BaseModel):
 
 
 class TasksMetrics(BaseModel):
-    """任务指标"""
+    """Métricas de tareas"""
     status_counts: Dict[str, int]
     total: int
 
 
 class WorkersMetrics(BaseModel):
-    """Worker指标"""
+    """Métricas de Workers"""
     total: int
     active: int
     idle: int
@@ -31,14 +31,14 @@ class WorkersMetrics(BaseModel):
 
 
 class MetricsResponse(BaseModel):
-    """系统指标响应"""
+    """Respuesta de métricas del sistema"""
     tasks: TasksMetrics
     workers: WorkersMetrics
     timestamp: str
 
 
 class HealthResponse(BaseModel):
-    """健康检查响应"""
+    """Respuesta de comprobación de salud"""
     status: str
     task_manager_running: Optional[bool] = None
     workers_count: Optional[int] = None
@@ -48,7 +48,7 @@ class HealthResponse(BaseModel):
 
 
 class SystemInfoResponse(BaseModel):
-    """系统信息响应"""
+    """Respuesta de información del sistema"""
     name: str
     version: str
     status: str

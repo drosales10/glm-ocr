@@ -1,7 +1,7 @@
 """
-Pydantic Schema定义
+Definiciones de esquemas Pydantic
 
-提供统一的API请求和响应模型
+Proporciona modelos unificados de solicitud y respuesta de la API
 """
 
 from app.schemas.task import (

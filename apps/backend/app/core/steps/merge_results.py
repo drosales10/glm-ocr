@@ -1,5 +1,5 @@
 """
-结果合并步骤
+Paso de fusión de resultados
 """
 
 from typing import Dict, Any, List, Optional, Callable
@@ -25,15 +25,15 @@ async def merge_results(
     progress_callback: Optional[Callable[[float, str], None]] = None,
 ) -> Dict[str, Any]:
     """
-    合并OCR结果
+    Fusiona los resultados OCR
 
     Args:
-        context: 处理上下文
-        input: MergeResultsStepInput，包含 ocr_result_path
-        progress_callback: 进度回调函数
+        context: Contexto de procesamiento
+        input: MergeResultsStepInput，incluye ocr_result_path
+        progress_callback: Función de callback de progreso
 
     Returns:
-        Dict[str, Any]: 合并后的结果
+        Dict[str, Any]: Resultado fusionado
     """
     task_id = context.task_id
     output_format = context.output_format
@@ -45,7 +45,7 @@ async def merge_results(
         if progress_callback:
             await progress_callback(0.0, "Initializing merge")
 
-        # 从文件读取OCR结果
+        # Leer el resultado OCR desde el archivo
         ocr_results = {}
         try:
             with open(result_path, "r", encoding="utf-8") as f:
@@ -56,7 +56,7 @@ async def merge_results(
                 f"[{task_id}] Failed to read OCR result from {result_path}: {e}"
             )
 
-        # 根据输出格式进行合并
+        # Fusionar según el formato de salida
         md_output_path, json_output_path = await _merge_to_markdown(
             context, ocr_results, output_dir, progress_callback
         )
@@ -91,7 +91,7 @@ async def _merge_to_markdown(
     output_dir: str,
     progress_callback: Optional[Callable[[float, str], None]] = None,
 ):
-    """合并为Markdown格式"""
+    """Fusiona en formato Markdown"""
     pages = ocr_results.get("pages", [])
 
     markdown_lines = []
@@ -107,7 +107,7 @@ async def _merge_to_markdown(
             layout_type = block.get("layout_type", "")
             if layout_type == "image":
                 img_name = block.get("image_path")
-                # 将相对路径转换为绝对路径
+                # Convertir la ruta relativa en absoluta
                 if img_name and not os.path.isabs(img_name):
                     img_name = os.path.abspath(img_name)
 
@@ -126,7 +126,7 @@ async def _merge_to_markdown(
         await progress_callback(progress, f"Merging page {i + 1}/{total_pages}")
     result["full_markdown"] = "".join(markdown_lines)
     result["layout"] = merge_res_layout
-    # 写入文件
+    # Escribir el archivo
     md_output_path = str(Path(output_dir) / "result.md")
     with open(md_output_path, "w", encoding="utf-8") as f:
         f.writelines(markdown_lines)

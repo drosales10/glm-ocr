@@ -8,7 +8,7 @@ from app.utils.logger import logger
 
 
 class FileUploadHandler:
-    """文件上传处理器，只负责校验和保存"""
+    """Procesador de carga de archivos; solo valida y guarda"""
 
     DOCUMENT_EXTENSIONS = {".pdf", ".doc", ".docx"}
     IMAGE_EXTENSIONS = {
@@ -32,7 +32,7 @@ class FileUploadHandler:
         pass
 
     def valid(self, file: UploadFile) -> bool:
-        """校验文件是否是 PDF、Word 或常见图片类型"""
+        """Valida si el archivo es PDF, Word o un tipo de imagen común"""
         filename = (file.filename or "").strip()
         suffix = Path(filename).suffix.lower()
         content_type = (file.content_type or "").lower()
@@ -48,9 +48,9 @@ class FileUploadHandler:
     async def save_to_path(
         self, file: UploadFile, filename: str | None = None, upload_dir: str | Path | None = None
     ) -> str:
-        """校验后将上传文件保存到指定目录，并返回保存路径"""
+        """Tras validar, guarda el archivo subido en el directorio indicado y devuelve la ruta"""
         if not self.valid(file):
-            raise HTTPException(status_code=400, detail="仅支持 PDF、Word 或常见图片格式文件")
+            raise HTTPException(status_code=400, detail="Solo se admiten archivos PDF, Word o imágenes comunes")
 
         safe_name = Path(filename or file.filename or "upload").name
         base_dir = Path(upload_dir) if upload_dir else Path(settings.OUTPUT_DIR)
@@ -65,9 +65,9 @@ class FileUploadHandler:
                     break
                 await target.write(chunk)
 
-        logger.info("文件已保存到: %s", dest_path)
+        logger.info("Archivo guardado en: %s", dest_path)
         return str(dest_path)
 
 
-# 全局文件上传处理器实例
+# Instancia global del procesador de carga de archivos
 file_upload_handler = FileUploadHandler()

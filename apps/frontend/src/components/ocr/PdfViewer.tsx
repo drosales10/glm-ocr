@@ -21,10 +21,10 @@ interface PdfViewerProps {
     onPageMouseLeave?: (e: React.MouseEvent<HTMLDivElement>, pageNumber: number) => void;
 }
 
-// 虚拟渲染配置
+// Configuración de renderizado virtual
 const VIRTUAL_CONFIG = {
-    BUFFER_PAGES: 2, // 视口前后各渲染的缓冲页数
-    PLACEHOLDER_HEIGHT: 842, // A4 页面默认高度（像素），后续根据实际页面高度动态调整
+    BUFFER_PAGES: 2, // Páginas de búfer a renderizar antes y después del viewport
+    PLACEHOLDER_HEIGHT: 842, // Altura predeterminada de página A4 (px); se ajusta dinámicamente según la altura real
 };
 
 const PdfViewerCanvasOnly: React.FC<PdfViewerProps> = ({
@@ -36,12 +36,12 @@ const PdfViewerCanvasOnly: React.FC<PdfViewerProps> = ({
     onPageMouseLeave,
 }) => {
     const [numPages, setNumPages] = useState<number>(0);
-    // 虚拟渲染相关状态
+    // Estado relacionado con el renderizado virtual
     const [visibleRange, setVisibleRange] = useState<[number, number]>([1, 1]);
     const [pageHeights, setPageHeights] = useState<Record<number, number>>({});
     const [viewportHeight, setViewportHeight] = useState<number>(0);
 
-    const pageRefs = useRef<(HTMLDivElement | null)[]>([]); // 每个页面的 ref
+    const pageRefs = useRef<(HTMLDivElement | null)[]>([]); // ref de cada página
     const scrollContainerRef = useRef<HTMLDivElement | null>(null);
     const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
@@ -53,71 +53,71 @@ const PdfViewerCanvasOnly: React.FC<PdfViewerProps> = ({
         []
     );
 
-    // 使用 PDF 缩放 hook
+    // Usar el hook de zoom del PDF
     const { scale, zoomIn, zoomOut, resetZoom, setAutoScale, isInitialScaleSetRef } = usePdfZoom();
 
-    // 计算页面的累计高度（用于占位）- 考虑缩放
+    // Calcular la altura acumulada de las páginas (para placeholders), considerando la escala
     const getPageOffset = useCallback((pageNumber: number): number => {
-        let offset = 20; // 容器 padding
+        let offset = 20; // padding del contenedor
         for (let i = 1; i < pageNumber; i++) {
             const pageHeight = (pageHeights[i] || VIRTUAL_CONFIG.PLACEHOLDER_HEIGHT) * scale;
-            offset += pageHeight + 20; // 缩放后的页面高度 + mb-5 间距
+            offset += pageHeight + 20; // altura de página escalada + espaciado mb-5
         }
         return offset;
     }, [pageHeights, scale]);
 
-    // 使用 PDF 导航 hook
+    // Usar el hook de navegación del PDF
     const { currentPage, inputValue, setInputValue, setCurrentPage, prevPage, nextPage, isProgrammaticScrollRef, lastProgrammaticPageRef } = usePdfNavigation({ numPages, getPageOffset, scrollContainerRef });
 
     const onDocumentLoadSuccess = async ({ numPages }: { numPages: number }) => {
         setNumPages(numPages);
         setCurrentPage(1);
         setInputValue('1');
-        pageRefs.current = new Array(numPages).fill(null); // 初始化 refs 数组
+        pageRefs.current = new Array(numPages).fill(null); // Inicializar el array de refs
 
-        // 使用默认值初始化页面高度
+        // Inicializar la altura de las páginas con valores por defecto
         const initialHeights: Record<number, number> = {};
         for (let i = 1; i <= numPages; i++) {
             initialHeights[i] = VIRTUAL_CONFIG.PLACEHOLDER_HEIGHT;
         }
         setPageHeights(initialHeights);
 
-        // 计算自适应的初始缩放比例
+        // Calcular la escala inicial adaptativa
         const container = scrollContainerRef.current;
         if (container && !isInitialScaleSetRef.current) {
-            // 等待一帧以确保容器尺寸正确
+            // Esperar un frame para asegurar que el tamaño del contenedor sea correcto
             await new Promise(resolve => requestAnimationFrame(resolve));
 
-            const containerWidth = container.clientWidth - 32; // 减去 padding
+            const containerWidth = container.clientWidth - 32; // restar el padding
             const containerHeight = container.clientHeight - 32;
 
-            // A4 默认尺寸: 595 x 842 点
+            // Tamaño predeterminado A4: 595 x 842 puntos
             const defaultPageWidth = 595;
             const defaultPageHeight = 842;
 
-            // 计算宽度和高度的缩放比例
+            // Calcular la escala por ancho y por alto
             const scaleByWidth = containerWidth / defaultPageWidth;
             const scaleByHeight = containerHeight / defaultPageHeight;
 
-            // 使用较小的缩放比例，确保页面能完全显示
-            const autoScale = Math.min(scaleByWidth, scaleByHeight, 1.5); // 最大不超过1.5倍
+            // Usar la menor escala para asegurar que la página se muestre completa
+            const autoScale = Math.min(scaleByWidth, scaleByHeight, 1.5); // máximo 1.5x
 
             setAutoScale(autoScale);
         }
     };
 
-    // 计算总高度 - 考虑缩放
+    // Calcular la altura total, considerando la escala
     const totalHeight = useMemo(() => {
         let height = 0;
         for (let i = 1; i <= numPages; i++) {
             height += (pageHeights[i] || VIRTUAL_CONFIG.PLACEHOLDER_HEIGHT) * scale;
         }
-        // 添加页面之间的间距（最后一个页面不需要底部间距）
+        // Añadir espaciado entre páginas (la última no necesita margen inferior)
         height += (numPages > 0 ? (numPages - 1) * 20 : 0);
         return height;
     }, [numPages, pageHeights, scale]);
 
-    // 根据滚动位置计算可见页面范围
+    // Calcular el rango de páginas visibles según la posición de scroll
     const calculateVisibleRange = useCallback(() => {
         if (!scrollContainerRef.current || viewportHeight === 0) {
             return [1, 1];
@@ -126,7 +126,7 @@ const PdfViewerCanvasOnly: React.FC<PdfViewerProps> = ({
         const scrollTop = scrollContainerRef.current.scrollTop;
         const { BUFFER_PAGES } = VIRTUAL_CONFIG;
 
-        // 找到第一个部分可见的页面
+        // Encontrar la primera página parcialmente visible
         let startPage = 1;
         for (let i = 1; i <= numPages; i++) {
             const pageOffset = getPageOffset(i);
@@ -139,7 +139,7 @@ const PdfViewerCanvasOnly: React.FC<PdfViewerProps> = ({
             }
         }
 
-        // 找到最后一个部分可见的页面
+        // Encontrar la última página parcialmente visible
         const viewportBottom = scrollTop + viewportHeight;
         let endPage = numPages;
         for (let i = startPage; i <= numPages; i++) {
@@ -151,26 +151,26 @@ const PdfViewerCanvasOnly: React.FC<PdfViewerProps> = ({
             }
         }
 
-        // 添加缓冲区
+        // Añadir búfer
         startPage = Math.max(1, startPage - BUFFER_PAGES);
         endPage = Math.min(numPages, endPage + BUFFER_PAGES);
 
         return [startPage, endPage];
     }, [viewportHeight, numPages, pageHeights, scale, getPageOffset]);
 
-    // 更新可见范围
+    // Actualizar el rango visible
     const updateVisibleRange = useCallback(() => {
         const [start, end] = calculateVisibleRange();
         setVisibleRange([start, end]);
     }, [calculateVisibleRange]);
 
-    // 页面加载完成时更新高度
+    // Actualizar la altura cuando la página termine de cargar
     const handlePageRenderSuccess = useCallback((pageNumber: number, pageElement: HTMLDivElement) => {
-        // 获取实际渲染高度（已包含scale），需要除以scale得到原始高度
+        // Obtener la altura renderizada real (ya incluye scale); dividir por scale para la altura original
         const renderedHeight = pageElement.offsetHeight;
         const originalHeight = renderedHeight / scale;
 
-        // 更新内部状态（存储原始高度）
+        // Actualizar el estado interno (almacenar la altura original)
         setPageHeights(prev => {
             if (prev[pageNumber] !== originalHeight) {
                 return { ...prev, [pageNumber]: originalHeight };
@@ -179,10 +179,10 @@ const PdfViewerCanvasOnly: React.FC<PdfViewerProps> = ({
         });
     }, [scale]);
 
-    // 监听滚动
+    // Escuchar el scroll
     useEffect(() => {
         const handleScroll = () => {
-            // 如果是程序触发的滚动，直接使用目标页码，不重新计算
+            // Si el scroll es programático, usar directamente la página destino sin recalcular
             if (isProgrammaticScrollRef.current) {
                 const targetPage = lastProgrammaticPageRef.current;
                 if (targetPage !== currentPage) {
@@ -193,7 +193,7 @@ const PdfViewerCanvasOnly: React.FC<PdfViewerProps> = ({
                 return;
             }
 
-            // 更新当前页码
+            // Actualizar el número de página actual
             let visiblePage = 1;
             pageRefs.current.forEach((ref, idx) => {
                 if (ref) {
@@ -208,7 +208,7 @@ const PdfViewerCanvasOnly: React.FC<PdfViewerProps> = ({
                 setInputValue(visiblePage.toString());
             }
 
-            // 更新可见范围
+            // Actualizar el rango visible
             updateVisibleRange();
         };
 
@@ -217,7 +217,7 @@ const PdfViewerCanvasOnly: React.FC<PdfViewerProps> = ({
         return () => container?.removeEventListener('scroll', handleScroll);
     }, [numPages, currentPage, pageHeights, scale, updateVisibleRange]);
 
-    // 监听容器尺寸变化
+    // Escuchar cambios de tamaño del contenedor
     useEffect(() => {
         const container = scrollContainerRef.current;
         if (!container) return;
@@ -240,13 +240,13 @@ const PdfViewerCanvasOnly: React.FC<PdfViewerProps> = ({
         };
     }, [updateVisibleRange]);
 
-    // 监听缩放变化，更新可见范围
+    // Escuchar cambios de escala y actualizar el rango visible
     useEffect(() => {
         updateVisibleRange();
     }, [scale, updateVisibleRange]);
 
 
-    // 渲染页面组件
+    // Renderizar el componente de página
     const renderPage = (pageNumber: number) => {
         const height = pageHeights[pageNumber] || VIRTUAL_CONFIG.PLACEHOLDER_HEIGHT;
 
@@ -256,7 +256,7 @@ const PdfViewerCanvasOnly: React.FC<PdfViewerProps> = ({
                 ref={(el) => {
                     pageRefs.current[pageNumber - 1] = el;
                     if (el) {
-                        // 页面渲染后更新高度
+                        // Actualizar la altura tras renderizar la página
                         setTimeout(() => handlePageRenderSuccess(pageNumber, el), 0);
                     }
                 }}
@@ -280,7 +280,7 @@ const PdfViewerCanvasOnly: React.FC<PdfViewerProps> = ({
         );
     };
 
-    // 渲染占位符
+    // Renderizar placeholder
     const renderPlaceholder = (pageNumber: number) => {
         const height = pageHeights[pageNumber] || VIRTUAL_CONFIG.PLACEHOLDER_HEIGHT;
 
@@ -299,9 +299,9 @@ const PdfViewerCanvasOnly: React.FC<PdfViewerProps> = ({
 
     return (
         <div className={`pdf-viewer flex flex-col h-full overflow-hidden ${className}`}>
-            {/* 工具栏：缩放 + 翻页 */}
+            {/* Barra de herramientas: zoom + paginación */}
             <div className="toolbar bg-white border-b p-2 grid grid-cols-2 xl:grid-cols-3 gap-4 sticky top-0 z-10">
-                <div className='hidden xl:block text-nowrap truncate'>{file?.name || 'PDF 文件预览'}</div>
+                <div className='hidden xl:block text-nowrap truncate'>{file?.name || 'Vista previa PDF'}</div>
                 <div className="flex items-center justify-center gap-3">
 
                     <button
@@ -356,14 +356,14 @@ const PdfViewerCanvasOnly: React.FC<PdfViewerProps> = ({
                 </div>
             </div>
 
-            {/* 滚动容器 - 虚拟渲染 */}
+            {/* Contenedor de scroll - renderizado virtual */}
             <div ref={scrollContainerRef} className="flex-1 overflow-auto bg-gray-50 p-4 pdf-scroll-container relative">
                 <Document
                     file={file}
                     options={documentOptions}
                     onLoadSuccess={onDocumentLoadSuccess}
-                    loading={<div className="text-center py-20 text-gray-500">正在加载 PDF...</div>}
-                    error={<div className="text-red-600 text-center py-20">PDF 加载失败，请检查文件</div>}
+                    loading={<div className="text-center py-20 text-gray-500">Cargando PDF...</div>}
+                    error={<div className="text-red-600 text-center py-20">Error al cargar el PDF. Revisa el archivo</div>}
                 >
                     {numPages > 0 && (
                         <div

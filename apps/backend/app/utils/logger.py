@@ -1,6 +1,6 @@
 """
-日志封装模块
-支持自动从请求header中提取并打印requestid
+Módulo de encapsulación de logs
+Soporta extraer automáticamente el request id del header de la solicitud e imprimirlo
 """
 
 import contextvars
@@ -10,67 +10,67 @@ from typing import Optional
 
 from fastapi import Request
 
-# 定义上下文变量
+# Definir variables de contexto
 _request_id_var: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
     "request_id", default=None
 )
 
 
 class RequestContextFilter(logging.Filter):
-    """日志过滤器，用于自动添加request_id到日志记录中"""
+    """Filtro de logs para añadir automáticamente request_id a los registros"""
 
     def set_context(self, request_id: Optional[str] = None):
-        """设置当前上下文的request_id"""
+        """Establece el request_id del contexto actual"""
         if request_id is not None:
             _request_id_var.set(request_id)
 
     def set_request_id(self, request_id: Optional[str]):
-        """设置当前上下文的request_id"""
+        """Establece el request_id del contexto actual"""
         if request_id is not None:
             _request_id_var.set(request_id)
 
     def get_request_id(self) -> Optional[str]:
-        """获取当前上下文的request_id"""
+        """Obtiene el request_id del contexto actual"""
         return _request_id_var.get()
 
     def clear_context(self):
-        """清除当前上下文的request_id"""
-        # 使用 set_token 来清除变量
+        """Borra el request_id del contexto actual"""
+        # Usar set_token para borrar la variable
         _request_id_var.set(None)
 
     def clear_request_id(self):
-        """清除当前上下文的request_id"""
+        """Borra el request_id del contexto actual"""
         _request_id_var.set(None)
 
     def filter(self, record):
-        """为日志记录添加request_id字段"""
+        """Añade el campo request_id al registro de log"""
         request_id = self.get_request_id()
 
         record.request_id = request_id if request_id else "N/A"
         return True
 
 
-# 全局请求上下文过滤器实例
+# Instancia global del filtro de contexto de solicitud
 _context_filter = RequestContextFilter()
 
 
 class Logger:
-    """日志封装类"""
+    """Clase de encapsulación de logs"""
 
     def __init__(self, name: str | None = None):
         self.logger = logging.getLogger(name or __name__)
         self._setup_logger()
 
     def _setup_logger(self):
-        """配置日志格式"""
-        # 防止重复添加处理器
+        """Configura el formato de los logs"""
+        # Evitar añadir el manejador más de una vez
         if self.logger.handlers:
             return
 
-        # 创建处理器
+        # Crear el manejador
         handler = logging.StreamHandler()
 
-        # 设置日志格式，包含request_id和行号（向上跳一级）
+        # Configurar el formato de log, incluyendo request_id y número de línea (subir un nivel)
         formatter = logging.Formatter(
             "%(asctime)s - %(name)s - %(levelname)s - [request_id:%(request_id)s] - %(filename)s:%(lineno)d - %(funcName)s() - %(message)s",
             datefmt="%Y-%m-%d %H:%M:%S",
@@ -79,33 +79,33 @@ class Logger:
         handler.setFormatter(formatter)
         self.logger.addHandler(handler)
 
-        # 添加上下文过滤器
+        # Añadir el filtro de contexto
         self.logger.addFilter(_context_filter)
 
-        # 设置日志级别
+        # Establecer el nivel de log
         self.logger.setLevel(logging.DEBUG)
 
-        # 防止日志传播到根logger，避免重复输出
+        # Evitar que los logs se propaguen al logger raíz (salida duplicada)
         self.logger.propagate = False
 
     def debug(self, message: str, *args, **kwargs):
-        """调试日志"""
+        """Log de depuración"""
         self.logger.debug(message, *args, **kwargs, stacklevel=2)
 
     def info(self, message: str, *args, **kwargs):
-        """信息日志"""
+        """Log informativo"""
         self.logger.info(message, *args, **kwargs, stacklevel=2)
 
     def warning(self, message: str, *args, **kwargs):
-        """警告日志"""
+        """Log de advertencia"""
         self.logger.warning(message, *args, **kwargs, stacklevel=2)
 
     def error(self, message: str, *args, **kwargs):
-        """错误日志"""
+        """Log de error"""
         self.logger.error(message, *args, **kwargs, stacklevel=2)
 
     def exception(self, message: str, *args, **kwargs):
-        """异常日志"""
+        """Log de excepción"""
         self.logger.exception(message, *args, **kwargs, stacklevel=2)
 
 
@@ -113,14 +113,14 @@ def extract_request_id(
     request: Request, header_name: str = "X-Request-ID"
 ) -> Optional[str]:
     """
-    从请求header中提取request_id
+    Extrae el request_id del header de la solicitud
 
     Args:
-        request: Starlette请求对象
-        header_name: header名称，默认为'X-Request-ID'
+        request: Objeto de solicitud de Starlette
+        header_name: Nombre del header; por defecto 'X-Request-ID'
 
     Returns:
-        request_id字符串或None
+        Cadena request_id o None
     """
     return request.headers.get(header_name) or request.headers.get("requestid")
 
@@ -131,11 +131,11 @@ def request_context(
     request_header_name: str = "X-Request-ID",
 ):
     """
-    请求上下文管理器，自动设置和清理request_id
+    Gestor de contexto de solicitud; configura y limpia request_id automáticamente
 
     Args:
-        request: Starlette请求对象
-        request_header_name: request_id的header名称，默认为'X-Request-ID'
+        request: Objeto de solicitud de Starlette
+        request_header_name: Nombre del header de request_id; por defecto 'X-Request-ID'
     """
     request_id = extract_request_id(request, request_header_name)
 
@@ -150,43 +150,43 @@ def request_context(
 
 def set_request_id(request_id: str):
     """
-    手动设置request_id
+    Establece el request_id manualmente
 
     Args:
-        request_id: request_id字符串
+        request_id: Cadena request_id
     """
     _context_filter.set_request_id(request_id)
 
 
 def get_request_id() -> Optional[str]:
     """
-    获取当前上下文的request_id
+    Obtiene el request_id del contexto actual
 
     Returns:
-        request_id字符串或None
+        Cadena request_id o None
     """
     return _context_filter.get_request_id()
 
 
 def set_context(request_id: str | None = None):
     """
-    手动设置request_id
+    Establece el request_id manualmente
 
     Args:
-        request_id: request_id字符串
+        request_id: Cadena request_id
     """
     _context_filter.set_context(request_id=request_id)
 
 
 def clear_request_id():
-    """清除当前线程的request_id"""
+    """Borra el request_id del hilo actual"""
     _context_filter.clear_request_id()
 
 
 def clear_context():
-    """清除当前线程的上下文（request_id）"""
+    """Borra el contexto del hilo actual (request_id)"""
     _context_filter.clear_context()
 
 
-# 便捷的logger实例
+# Instancia conveniente de logger
 logger = Logger()

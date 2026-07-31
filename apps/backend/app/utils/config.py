@@ -1,5 +1,5 @@
 """
-应用配置管理
+Gestión de la configuración de la aplicación
 """
 from pydantic_settings import BaseSettings
 from typing import Literal, Optional
@@ -7,45 +7,45 @@ from pathlib import Path
 
 
 class Settings(BaseSettings):
-    """应用配置"""
+    """Configuración de la aplicación"""
 
-    # 基础配置
+    # Configuración básica
     APP_NAME: str = "OCR Task System"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
     HOST: str = "0.0.0.0"
     PORT: int = 8000
 
-    # 数据库配置
+    # Configuración de la base de datos
     DATABASE_URL: str = "sqlite+aiosqlite:///./tasks.db"
 
-    # 输出目录
+    # Directorio de salida
     OUTPUT_DIR: str = "./data"
 
-    # Worker配置
+    # Configuración de Workers
     RUN_WORKERS: bool = True
     WORKER_COUNT: int = 5
-    WORKER_POLL_INTERVAL: int = 5  # 秒
-    TASK_TIMEOUT: int = 3600  # 秒（1小时）
+    WORKER_POLL_INTERVAL: int = 5  # segundos
+    TASK_TIMEOUT: int = 3600  # segundos (1 hora)
 
-    # 任务配置
+    # Configuración de tareas
     MAX_QUEUE_SIZE: int = 100
     MAX_CONCURRENT_TASKS: int = 5
     DEFAULT_MAX_RETRIES: int = 3
-    DEFAULT_RETRY_DELAY: int = 60  # 秒
+    DEFAULT_RETRY_DELAY: int = 60  # segundos
 
-    # 清理配置
-    CLEANUP_INTERVAL: int = 300  # 秒（5分钟）
-    OLD_TASK_DAYS: int = 30  # 天
+    # Configuración de limpieza
+    CLEANUP_INTERVAL: int = 300  # segundos (5 minutos)
+    OLD_TASK_DAYS: int = 30  # días
 
-    # 恢复配置
-    RECOVERY_INTERVAL: int = 3600  # 秒（1小时）
+    # Configuración de recuperación
+    RECOVERY_INTERVAL: int = 3600  # segundos (1 hora)
 
-    # 监控配置
+    # Configuración de monitoreo
     METRICS_ENABLED: bool = True
-    METRICS_INTERVAL: int = 60  # 秒
+    METRICS_INTERVAL: int = 60  # segundos
 
-    # 日志配置
+    # Configuración de logs
     LOG_LEVEL: str = "INFO"
     LOG_FILE: Optional[str] = None
     LOG_FORMAT: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -57,9 +57,9 @@ class Settings(BaseSettings):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        # 确保输出目录存在
+        # Asegura que el directorio de salida exista
         Path(self.OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
 
 
-# 创建全局配置实例
+# Crear la instancia global de configuración
 settings = Settings()

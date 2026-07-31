@@ -14,17 +14,17 @@ import rehypeMathInHtml from '@/libs/rehypeMathInHtml'
 import { useMdVirtualRendering } from '@/hooks/useMdVirtualRendering'
 import { CopyButton } from './CopyButton'
 
-// 虚拟渲染配置
+// Configuración de renderizado virtual
 const VIRTUAL_CONFIG = {
-	BUFFER_BLOCKS: 10, // 可视区前后各渲染的缓冲块数
-	PLACEHOLDER_HEIGHT: 100, // 默认块高度（像素）
-	DEFAULT_BLOCK_HEIGHT: 150, // 默认块高度
+	BUFFER_BLOCKS: 10, // Bloques de búfer a renderizar antes y después del área visible
+	PLACEHOLDER_HEIGHT: 100, // Altura predeterminada del bloque (px)
+	DEFAULT_BLOCK_HEIGHT: 150, // Altura predeterminada del bloque
 };
 
-// KaTeX 配置：禁用严格模式警告
+// Configuración de KaTeX: desactivar advertencias del modo estricto
 const katexOptions = {
-	throwOnError: false, // 不抛出错误，而是渲染为文本
-	strict: false, // 禁用严格模式检查
+	throwOnError: false, // No lanzar error; renderizar como texto
+	strict: false, // Desactivar comprobaciones del modo estricto
 }
 
 export function MarkdownPreview() {
@@ -34,7 +34,7 @@ export function MarkdownPreview() {
 
 	const markdownRef = useRef<HTMLDivElement>(null)
 
-	// 使用虚拟渲染 hook
+	// Usar el hook de renderizado virtual
 	const {
 		visibleRange,
 		itemHeights: blockHeights,
@@ -53,32 +53,32 @@ export function MarkdownPreview() {
 		}
 	})
 
-	// 滚动定位逻辑：当 clickedPdfBlockId 变化时，自动滚动到对应的元素
+	// Lógica de scroll: al cambiar clickedPdfBlockId, desplazarse automáticamente al elemento correspondiente
 	useEffect(() => {
 
 		const container = markdownRef.current
 		if (!clickedPdfBlockId || !container || !getItemOffset) return
 
-		// 找到目标 block 的索引
+		// Encontrar el índice del block destino
 		const targetIndex = blocks.findIndex(block => String(block.id) === String(clickedPdfBlockId))
 		if (targetIndex === -1) return
 
-		// 计算目标元素的偏移量
+		// Calcular el desplazamiento del elemento destino
 		const itemOffset = getItemOffset(targetIndex)
 
-		// 获取元素高度（使用实际高度或默认高度）
+		// Obtener la altura del elemento (altura real o predeterminada)
 		const itemHeight = (blockHeights[targetIndex] || VIRTUAL_CONFIG.DEFAULT_BLOCK_HEIGHT)
 
-		// 计算目标滚动位置：将元素居中显示
-		// 公式：itemOffset - (容器高度 / 2) + (元素高度 / 2)
+		// Calcular la posición de scroll destino: centrar el elemento
+		// Fórmula: itemOffset - (altura del contenedor / 2) + (altura del elemento / 2)
 		const containerHeight = container.clientHeight
 		const padding = 24
 		const targetScrollTop = itemOffset - containerHeight / 2 + itemHeight / 2
 
-		// 先更新可见范围，确保目标元素被渲染
+		// Actualizar primero el rango visible para asegurar que el elemento destino se renderice
 		updateVisibleRange?.()
 
-		// 使用 requestAnimationFrame 确保 DOM 更新后再滚动
+		// Usar requestAnimationFrame para hacer scroll tras actualizar el DOM
 		requestAnimationFrame(() => {
 			container.scrollTo({
 				top: Math.max(0, targetScrollTop - padding),
@@ -93,25 +93,25 @@ export function MarkdownPreview() {
 		updateVisibleRange
 	])
 
-	// 图片错误处理函数 - 使用 useCallback 缓存，避免每次渲染都重新创建
+	// Manejador de errores de imagen: cachear con useCallback para no recrearlo en cada render
 	const handleImageError = useCallback((e: React.SyntheticEvent<HTMLImageElement, Event>) => {
 		const target = e.target as HTMLImageElement
-		// 如果已经是缺省图，就不再替换，避免无限循环
+		// Si ya es la imagen por defecto, no reemplazar para evitar un bucle infinito
 		if (target.dataset.fallback === 'true') {
 			return
 		}
 		target.style.display = 'none'
 	}, [])
 
-	// 使用 useMemo 缓存 components 对象，避免每次渲染都重新创建
-	// 必须在所有早期返回之前调用，遵守 React Hooks 规则
+	// Cachear el objeto components con useMemo para no recrearlo en cada render
+	// Debe llamarse antes de cualquier return temprano, cumpliendo las reglas de React Hooks
 	const markdownComponents = useMemo(
 		() => ({
 			img: ({ src, alt, width, height, ...props }: any) => {
 				return (
 					<img
 						src={src}
-						alt={alt || '图片'}
+						alt={alt || 'Imagen'}
 						className='max-w-full h-auto rounded-lg my-4 mx-auto block'
 						style={{
 							width: 'auto',
@@ -124,7 +124,7 @@ export function MarkdownPreview() {
 				)
 			},
 			div: ({ children, style, className, ...props }: any) => {
-				// 处理包含图片的 div，确保样式和类名正确应用
+				// Procesar divs que contienen imágenes; asegurar que estilos y className se apliquen correctamente
 				return (
 					<div style={style} className={className} {...props}>
 						{children}
@@ -139,7 +139,7 @@ export function MarkdownPreview() {
 	if (!blocks || blocks.length === 0) {
 		return (
 			<div className='flex items-center justify-center h-full text-muted-foreground'>
-				<p>暂无解析内容</p>
+				<p>Sin contenido para mostrar</p>
 			</div>
 		)
 	}
@@ -161,10 +161,10 @@ export function MarkdownPreview() {
 					const isSelected = clickedPdfBlockId === block.id
 					const isActive = isHovered || isSelected
 
-					// 判断是否为图片块
+					// Determinar si es un bloque de imagen
 					const isImage = block.isImage || false
 
-					// 如果不在可见范围内，渲染占位符
+					// Si no está en el rango visible, renderizar un placeholder
 					if (!isInRange) {
 						const height = blockHeights[index] || VIRTUAL_CONFIG.DEFAULT_BLOCK_HEIGHT
 						return (
@@ -177,13 +177,13 @@ export function MarkdownPreview() {
 						)
 					}
 
-					// 渲染实际块
+					// Renderizar el bloque real
 					return (
 						<div
 							key={block.id}
 							ref={(el) => {
 								if (el) {
-									// 块渲染后更新高度
+									// Actualizar la altura tras renderizar el bloque
 									setTimeout(() => handleBlockRenderSuccess(index, el), 0)
 								}
 							}}

@@ -1,5 +1,5 @@
 """
-Repository基类
+Clase base Repository
 """
 from typing import Generic, TypeVar, Type, Any, Dict, List, Optional
 
@@ -11,14 +11,14 @@ ModelType = TypeVar("ModelType", bound=Any)
 
 
 class BaseRepository(Generic[ModelType]):
-    """Repository基类"""
+    """Clase base Repository"""
 
     def __init__(self, session: AsyncSession, model: Type[ModelType]):
         self.session = session
         self.model = model
 
     async def create(self, **kwargs) -> ModelType:
-        """创建新记录"""
+        """Crea un nuevo registro"""
         db_obj = self.model(**kwargs)
         self.session.add(db_obj)
         await self.session.flush()
@@ -26,13 +26,13 @@ class BaseRepository(Generic[ModelType]):
         return db_obj
 
     async def get(self, id: int) -> Optional[ModelType]:
-        """根据ID获取记录"""
+        """Obtiene el registro por ID"""
         stmt = select(self.model).where(self.model.id == id)
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
     async def get_by_field(self, field_name: str, value: Any) -> Optional[ModelType]:
-        """根据字段值获取记录"""
+        """Obtiene el registro por valor de campo"""
         stmt = select(self.model).where(getattr(self.model, field_name) == value)
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
@@ -43,7 +43,7 @@ class BaseRepository(Generic[ModelType]):
         limit: int = 100,
         **filters
     ) -> List[ModelType]:
-        """查询记录列表"""
+        """Consulta la lista de registros"""
         stmt = select(self.model)
 
         for key, value in filters.items():
@@ -59,7 +59,7 @@ class BaseRepository(Generic[ModelType]):
         id: int,
         **kwargs
     ) -> Optional[ModelType]:
-        """更新记录"""
+        """Actualiza el registro"""
         stmt = select(self.model).where(self.model.id == id)
         result = await self.session.execute(stmt)
         db_obj = result.scalar_one_or_none()
@@ -75,7 +75,7 @@ class BaseRepository(Generic[ModelType]):
         return db_obj
 
     async def delete(self, id: int) -> bool:
-        """删除记录"""
+        """Elimina el registro"""
         stmt = select(self.model).where(self.model.id == id)
         result = await self.session.execute(stmt)
         db_obj = result.scalar_one_or_none()
@@ -88,7 +88,7 @@ class BaseRepository(Generic[ModelType]):
         return False
 
     async def count(self, **filters) -> int:
-        """统计记录数量"""
+        """Cuenta el número de registros"""
         from sqlalchemy import func
 
         stmt = select(func.count(self.model.id))

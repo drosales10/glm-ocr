@@ -1,5 +1,5 @@
 """
-版面分析和OCR处理步骤
+Paso de análisis de diseño y procesamiento OCR
 """
 
 import json
@@ -16,9 +16,9 @@ from app.utils.logger import logger
 
 
 class LayoutOcrStepInput:
-    image_files_path: List[str]  # 图片文件路径列表
-    page_count: Optional[int]  # 页数
-    images_dir: Optional[str]  # 图片目录
+    image_files_path: List[str]  # Lista de rutas de archivos de imagen
+    page_count: Optional[int]  # Número de páginas
+    images_dir: Optional[str]  # Directorio de imágenes
 
     def __init__(
         self,
@@ -37,23 +37,23 @@ async def layout_and_ocr(
     progress_callback: Optional[Callable[[float, str], None]] = None,
 ) -> Dict[str, Any]:
     """
-    执行版面分析和OCR处理
+    Ejecuta el análisis de diseño y el procesamiento OCR
 
     Args:
-        context: 处理上下文
-        pdf_result: PDF转图片的结果，包含:
-            - output_files: list[str] - 图片文件路径列表
-            - page_count: int - 页数
-            - images_dir: str - 图片目录
-        progress_callback: 进度回调函数
+        context: Contexto de procesamiento
+        pdf_result: Resultado de PDF a imagen, incluye:
+            - output_files: list[str] - Lista de rutas de archivos de imagen
+            - page_count: int - Número de páginas
+            - images_dir: str - Directorio de imágenes
+        progress_callback: Función de callback de progreso
 
     Returns:
-        Dict[str, Any]: OCR结果
+        Dict[str, Any]: Resultado OCR
     """
     task_id = context.task_id
     ocr_config = context.ocr_config
 
-    # 获取图片文件列表
+    # Obtener la lista de archivos de imagen
     image_files = input.image_files_path
     images_dir = input.images_dir
     page_count = input.page_count
@@ -62,10 +62,10 @@ async def layout_and_ocr(
     logger.info(f"[{task_id}] Processing {page_count} pages from {images_dir}")
 
     try:
-        # 调用实际的版面分析和OCR服务
-        # 这里需要根据实际的OCR API来实现
+        # Llamar al servicio real de análisis de diseño y OCR
+        # Aquí hay que implementarlo según la API OCR real
 
-        # 示例：假设我们有一个OCR客户端
+        # Ejemplo: supongamos que tenemos un cliente OCR
         result = await _call_ocr_service(
             page_size=page_size,
             image_files=image_files,
@@ -95,17 +95,17 @@ async def _call_ocr_service(
     progress_callback: Optional[Callable[[float, str], None]] = None,
 ) -> Dict[str, Any]:
     """
-    调用OCR服务
+    Llama al servicio OCR
 
-    这里是示例实现，实际需要根据您的OCR服务来调整
+    Esta es una implementación de ejemplo; ajústela según su servicio OCR
 
     Args:
-        image_files: 图片文件路径列表
-        images_dir: 图片目录
-        page_count: 页数
-        config: OCR配置
-        output_dir: 输出目录
-        progress_callback: 进度回调
+        image_files: Lista de rutas de archivos de imagen
+        images_dir: Directorio de imágenes
+        page_count: Número de páginas
+        config: Configuración OCR
+        output_dir: Directorio de salida
+        progress_callback: Callback de progreso
     """
 
     if progress_callback:
@@ -133,32 +133,32 @@ async def _call_ocr_service(
             block_index = block_idx
             normalized_box = vlm_bbox_convert(block_bbox, page_width, page_height)
 
-            # 如果 label 为 image，则裁剪图片并添加到 image_path 字段
+            # Si label es image, recortar la imagen y añadirla al campo image_path
             image_path_field = None
             if block_label == "image":
                 try:
-                    # 生成分割文件名
+                    # Generar el nombre del archivo segmentado
                     split_filename = f"split_{page_num}_{block_idx:04d}.png"
                     split_path = os.path.join(output_dir, split_filename)
                     crop_image_by_bbox_to_path(image_file, normalized_box, split_path)
                     image_path_field = split_path
                     ref_image_paths.append(image_path_field)
-                    logger.info(f"裁剪图片块 {block_idx}: {split_filename}")
+                    logger.info(f"Recortando bloque de imagen {block_idx}: {split_filename}")
                 except Exception as e:
-                    logger.warning(f"裁剪图片块 {block_idx} 失败: {str(e)}")
+                    logger.warning(f"Error al recortar el bloque de imagen {block_idx}: {str(e)}")
 
-            # 构建块信息，添加 image_path 字段
+            # Construir la información del bloque, añadiendo el campo image_path
             block_info = {
                 "layout_type": block_label,
                 "layout_box": normalized_box,
                 "content": block_content,
                 "index": block_index,
-                "image_path": image_path_field,  # 图片类型时包含裁剪后的路径
+                "image_path": image_path_field,  # Para tipo imagen, incluye la ruta recortada
                 "page_index": page_num,
             }
             page_blocks.append(block_info)
             block_idx += 1
-        # 示例：每页的OCR结果
+        # Ejemplo: resultado OCR de cada página
         pages_result.append(
             {
                 "page_index": page_num,
@@ -170,7 +170,7 @@ async def _call_ocr_service(
     if progress_callback:
         await progress_callback(100.0, "OCR processing completed")
 
-    # 保存OCR结果到JSON
+    # Guardar el resultado OCR en JSON
     ocr_result_file = Path(output_dir) / "ocr_result.json"
     ocr_result_data = {
         "success": True,

@@ -1,5 +1,5 @@
 """
-转换器工厂和注册表
+Fábrica y registro de convertidores
 """
 
 from __future__ import annotations
@@ -17,35 +17,35 @@ from app.utils.logger import logger
 
 
 class ConverterFactory:
-    """转换器工厂"""
+    """Fábrica de convertidores"""
 
-    # 转换器注册表
+    # Registro de convertidores
     _converters: Dict[str, Type[BaseConverter]] = {}
 
     @classmethod
     def register(cls, converter_class: Type[BaseConverter]) -> None:
-        """注册转换器
+        """Registra un convertidor
 
         Args:
-            converter_class: 转换器类
+            converter_class: Clase del convertidor
         """
         converter = converter_class()
         for ext in converter.supported_extensions:
             cls._converters[ext] = converter_class
-        logger.info(f"已注册转换器: {converter.name}, 支持扩展名: {converter.supported_extensions}")
+        logger.info(f"Convertidor registrado: {converter.name}, extensiones admitidas: {converter.supported_extensions}")
 
     @classmethod
     def get_converter(cls, file_path: str) -> BaseConverter:
-        """根据文件路径获取合适的转换器
+        """Obtiene el convertidor adecuado según la ruta del archivo
 
         Args:
-            file_path: 文件路径
+            file_path: Ruta del archivo
 
         Returns:
-            BaseConverter: 转换器实例
+            BaseConverter: Instancia del convertidor
 
         Raises:
-            UnsupportedFormatError: 不支持的文件格式
+            UnsupportedFormatError: Formato de archivo no admitido
         """
         _, ext = os.path.splitext(file_path)
         ext = ext.lower()
@@ -53,7 +53,7 @@ class ConverterFactory:
         if ext not in cls._converters:
             supported_formats = list(cls._converters.keys())
             raise UnsupportedFormatError(
-                f"不支持的文件格式: {ext}. 支持的格式: {supported_formats}"
+                f"Formato de archivo no admitido: {ext}. Formatos admitidos: {supported_formats}"
             )
 
         converter_class = cls._converters[ext]
@@ -61,13 +61,13 @@ class ConverterFactory:
 
     @classmethod
     def get_converter_by_name(cls, name: str) -> Optional[BaseConverter]:
-        """根据名称获取转换器
+        """Obtiene el convertidor por nombre
 
         Args:
-            name: 转换器名称
+            name: Nombre del convertidor
 
         Returns:
-            Optional[BaseConverter]: 转换器实例，如果不存在则返回None
+            Optional[BaseConverter]: Instancia del convertidor; None si no existe
         """
         for converter_class in cls._converters.values():
             converter = converter_class()
@@ -77,19 +77,19 @@ class ConverterFactory:
 
     @classmethod
     def get_supported_formats(cls) -> List[str]:
-        """获取所有支持的文件格式
+        """Obtiene todos los formatos de archivo admitidos
 
         Returns:
-            List[str]: 支持的文件扩展名列表
+            List[str]: Lista de extensiones de archivo admitidas
         """
         return list(cls._converters.keys())
 
     @classmethod
     def list_converters(cls) -> List[str]:
-        """列出所有已注册的转换器名称
+        """Lista los nombres de todos los convertidores registrados
 
         Returns:
-            List[str]: 转换器名称列表
+            List[str]: Lista de nombres de convertidores
         """
         names = set()
         for converter_class in cls._converters.values():
@@ -98,35 +98,35 @@ class ConverterFactory:
         return list(names)
 
 
-# 注册所有转换器
+# Registrar todos los convertidores
 def register_default_converters():
-    """注册默认的转换器"""
+    """Registra los convertidores predeterminados"""
     ConverterFactory.register(PDFConverter)
     ConverterFactory.register(ImageConverter)
     ConverterFactory.register(WordConverter)
 
 
-# 自动注册默认转换器
+# Registrar automáticamente los convertidores predeterminados
 register_default_converters()
 
 
-# 导出
+# Exportaciones
 __all__ = [
-    # 工厂和基类
+    # Fábrica y clases base
     "ConverterFactory",
     "BaseConverter",
 
-    # 具体转换器
+    # Convertidores concretos
     "PDFConverter",
     "ImageConverter",
     "WordConverter",
 
-    # 统一服务（推荐使用）
+    # Servicio unificado (uso recomendado)
     "FileConverterService",
     "default_converter",
     "convert_file",
 
-    # 异常
+    # Excepciones
     "UnsupportedFormatError",
     "ConversionFailedError",
     "ConversionTimeoutError",

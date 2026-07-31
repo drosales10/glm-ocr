@@ -1,5 +1,5 @@
 """
-任务重试处理器
+Procesador de reintentos de tareas
 """
 import random
 from typing import Optional
@@ -10,7 +10,7 @@ from app.utils.logger import logger
 
 
 class RetryHandler:
-    """任务重试处理器"""
+    """Procesador de reintentos de tareas"""
 
     def __init__(self, task_repo: TaskRepository):
         self.task_repo = task_repo
@@ -22,33 +22,33 @@ class RetryHandler:
         error_type: str = "unknown"
     ) -> bool:
         """
-        处理任务失败
+        Gestiona el fallo de una tarea
 
         Args:
-            task: 失败的任务
-            error_message: 错误信息
-            error_type: 错误类型
+            task: Tarea fallida
+            error_message: Mensaje de error
+            error_type: Tipo de error
 
         Returns:
-            bool: 是否可以重试
+            bool: Si se puede reintentar
         """
         logger.warning(
             f"Task {task.task_id} failed (attempt {task.retry_count + 1}/{task.max_retries}): {error_message}"
         )
 
-        # 检查是否可以重试
+        # Comprobar si se puede reintentar
         if not task.can_retry:
             logger.error(f"Task {task.task_id} exceeded max retries, moving to dead letter")
             await self._move_to_dead_letter(task, error_message, error_type)
             return False
 
-        # 检查错误类型是否可重试
+        # Comprobar si el tipo de error es reintentable
         if not self._is_retryable_error(error_type):
             logger.error(f"Task {task.task_id} failed with non-retryable error: {error_type}")
             await self._move_to_dead_letter(task, error_message, error_type)
             return False
 
-        # 计算重试延迟
+        # Calcular el retraso de reintento
         retry_delay = self._calculate_retry_delay(task.retry_count, task.retry_delay)
 
         logger.info(
@@ -56,7 +56,7 @@ class RetryHandler:
             f"(attempt {task.retry_count + 1}/{task.max_retries})"
         )
 
-        # 重置任务状态为PENDING
+        # Restablecer el estado de la tarea a PENDING
         await self.task_repo.reset_task_for_retry(
             task_id=task.task_id,
             error_message=error_message
@@ -66,35 +66,35 @@ class RetryHandler:
 
     def _calculate_retry_delay(self, retry_count: int, base_delay: int) -> int:
         """
-        计算重试延迟时间（指数退避 + 随机抖动）
+        Calcula el retraso de reintento (retroceso exponencial + jitter aleatorio)
 
         Args:
-            retry_count: 当前重试次数
-            base_delay: 基础延迟时间（秒）
+            retry_count: Número actual de reintentos
+            base_delay: Retraso base (segundos)
 
         Returns:
-            int: 延迟时间（秒）
+            int: Tiempo de retraso (segundos)
         """
-        # 指数退避
+        # Retroceso exponencial
         exponential_delay = base_delay * (2 ** retry_count)
 
-        # 添加随机抖动（10%）
+        # Añadir jitter aleatorio (10%)
         jitter = random.randint(0, int(exponential_delay * 0.1))
 
-        # 最大延迟1小时
+        # Retraso máximo de 1 hora
         return min(exponential_delay + jitter, 3600)
 
     def _is_retryable_error(self, error_type: str) -> bool:
         """
-        判断错误是否可重试
+        Determina si el error es reintentable
 
         Args:
-            error_type: 错误类型
+            error_type: Tipo de error
 
         Returns:
-            bool: 是否可重试
+            bool: Si es reintentable
         """
-        # 可重试的错误类型
+        # Tipos de error reintentables
         retryable_errors = {
             "timeout",
             "connection_error",
@@ -104,7 +104,7 @@ class RetryHandler:
             "resource_temporarily_unavailable"
         }
 
-        # 不可重试的错误类型
+        # Tipos de error no reintentables
         non_retryable_errors = {
             "validation_error",
             "authentication_error",
@@ -120,7 +120,7 @@ class RetryHandler:
         if error_type in retryable_errors:
             return True
 
-        # 默认情况下，未知错误可重试
+        # Por defecto, los errores desconocidos son reintentables
         return True
 
     async def _move_to_dead_letter(
@@ -129,8 +129,8 @@ class RetryHandler:
         error_message: str,
         error_type: str
     ):
-        """将任务标记为死信"""
-        # 更新任务状态
+        """Marca la tarea como carta muerta (dead letter)"""
+        # Actualiza el estado de la tarea
         await self.task_repo.update_task_status(
             task_id=task.task_id,
             status=TaskStatus.DEAD_LETTER,

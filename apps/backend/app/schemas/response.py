@@ -1,5 +1,5 @@
 """
-通用响应模型
+Modelo de respuesta común
 """
 from typing import Optional, Any, Generic, TypeVar
 from pydantic import BaseModel, Field
@@ -9,25 +9,25 @@ T = TypeVar('T')
 
 
 class ApiResponse(BaseModel, Generic[T]):
-    """统一API响应格式"""
-    success: bool = Field(..., description="请求是否成功")
-    data: Optional[T] = Field(None, description="响应数据")
-    message: Optional[str] = Field(None, description="响应消息")
-    error_code: Optional[str] = Field(None, description="错误码")
+    """Formato unificado de respuesta de la API"""
+    success: bool = Field(..., description="Indica si la solicitud fue exitosa")
+    data: Optional[T] = Field(None, description="Datos de la respuesta")
+    message: Optional[str] = Field(None, description="Mensaje de la respuesta")
+    error_code: Optional[str] = Field(None, description="Código de error")
 
     class Config:
         json_schema_extra = {
             "example": {
                 "success": True,
                 "data": {"key": "value"},
-                "message": "操作成功",
+                "message": "Operación exitosa",
                 "error_code": None
             }
         }
 
 
 class TaskData(BaseModel):
-    """任务数据"""
+    """Datos de la tarea"""
     task_id: str
     document_id: str
     status: str
@@ -43,7 +43,7 @@ class TaskData(BaseModel):
 
 
 class TaskResultData(BaseModel):
-    """任务结果数据"""
+    """Datos del resultado de la tarea"""
     metadata: Optional[dict] = None
     full_markdown: Optional[str] = None
     layout: Optional[list] = None

@@ -1,5 +1,5 @@
 """
-数据库连接和会话管理
+Conexión a la base de datos y gestión de sesiones
 """
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base
@@ -8,14 +8,14 @@ from app.models.base import Base
 from app.utils.config import settings
 from app.utils.logger import logger
 
-# 创建异步引擎
+# Crear el motor asíncrono
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.DEBUG,
     future=True
 )
 
-# 创建异步会话工厂
+# Crear la fábrica de sesiones asíncronas
 AsyncSessionLocal = async_sessionmaker(
     engine,
     class_=AsyncSession,
@@ -26,10 +26,10 @@ AsyncSessionLocal = async_sessionmaker(
 
 
 async def init_db():
-    """初始化数据库"""
+    """Inicializa la base de datos"""
     logger.info("Initializing database...")
 
-    # 创建所有表
+    # Crear todas las tablas
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
@@ -37,7 +37,7 @@ async def init_db():
 
 
 async def close_db():
-    """关闭数据库连接"""
+    """Cierra la conexión a la base de datos"""
     logger.info("Closing database connection...")
     await engine.dispose()
     logger.info("Database connection closed")
@@ -45,10 +45,10 @@ async def close_db():
 
 async def get_db() -> AsyncSession:
     """
-    获取数据库会话（依赖注入）
+    Obtiene una sesión de base de datos (inyección de dependencias)
 
     Yields:
-        AsyncSession: 数据库会话
+        AsyncSession: Sesión de base de datos
     """
     async with AsyncSessionLocal() as session:
         try:

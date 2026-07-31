@@ -18,12 +18,12 @@ export function usePdfNavigation({
 	const isProgrammaticScrollRef = useRef<boolean>(false)
 	const lastProgrammaticPageRef = useRef<number>(0)
 
-	// 跳转到指定页
+	// Ir a una página concreta
 	const goToPage = useCallback(
 		(page: number) => {
 			const target = Math.max(1, Math.min(page, numPages))
 
-			// 标记为程序触发的滚动，并记录目标页码
+			// Marcar como scroll programático y registrar la página destino
 			isProgrammaticScrollRef.current = true
 			lastProgrammaticPageRef.current = target
 
@@ -31,7 +31,7 @@ export function usePdfNavigation({
 			setInputValue(target.toString())
 			onPageChange?.(target)
 
-			// 计算目标页面的滚动位置
+			// Calcular la posición de scroll de la página destino
 			const offset = getPageOffset(target)
 			const container = scrollContainerRef.current
 			if (container) {
@@ -40,7 +40,7 @@ export function usePdfNavigation({
 					behavior: 'instant'
 				})
 
-				// 延迟重置标记，确保滚动事件处理完成
+				// Retrasar el reinicio de la marca para asegurar que el evento de scroll se procese
 				setTimeout(() => {
 					isProgrammaticScrollRef.current = false
 				}, 100)
@@ -49,26 +49,26 @@ export function usePdfNavigation({
 		[numPages, getPageOffset, scrollContainerRef, onPageChange]
 	)
 
-	// 防抖处理输入框变化
+	// Debounce del cambio en el input
 	useEffect(() => {
 		const timer = setTimeout(() => {
 			const val = parseInt(inputValue)
 			if (!isNaN(val) && val >= 1 && val <= numPages && val !== currentPage) {
 				goToPage(val)
 			} else if (isNaN(val) || val < 1 || val > numPages) {
-				// 如果输入无效，恢复当前页码
+				// Si la entrada no es válida, restaurar el número de página actual
 				setInputValue(currentPage.toString())
 			}
-		}, 500) // 500ms 防抖延迟
+		}, 500) // Retraso de debounce de 500ms
 
 		return () => clearTimeout(timer)
 	}, [inputValue, numPages, currentPage, goToPage])
 
-	// 上一页 / 下一页
+	// Página anterior / siguiente
 	const prevPage = useCallback(() => goToPage(currentPage - 1), [currentPage, goToPage])
 	const nextPage = useCallback(() => goToPage(currentPage + 1), [currentPage, goToPage])
 
-	// 重置页码
+	// Reiniciar el número de página
 	const resetPage = useCallback(() => {
 		setCurrentPage(1)
 		setInputValue('1')

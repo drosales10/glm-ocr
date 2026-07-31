@@ -24,7 +24,7 @@ export function FilePreview({ file, result }: FilePreviewProps) {
 
 	const [showCopyButton, setShowCopyButton] = useState(false)
 
-	// 获取 PDF 原始尺寸（从 metadata 或默认值）
+	// Obtener las dimensiones originales del PDF (desde metadata o valores por defecto)
 	const pdfOriginalWidth = result?.response?.metadata?.width ?? 1654
 	const pdfOriginalHeight = result?.response?.metadata?.height ?? 2339
 
@@ -33,13 +33,13 @@ export function FilePreview({ file, result }: FilePreviewProps) {
 		return !isNaN(pdfOriginalWidth) && !isNaN(pdfOriginalHeight) && result?.status === 'completed'
 	}, [pdfOriginalWidth, pdfOriginalHeight, result?.status])
 
-	// 获取当前高亮的 block
+	// Obtener el block actualmente resaltado
 	const hoveredBlock = hoveredBlockId ? blocks.find(b => b.id === hoveredBlockId) : null
 	const clickedBlock = clickedBlockId ? blocks.find(b => b.id === clickedBlockId) : null
-	// 优先显示点击的 block，否则显示悬停的 block
+	// Priorizar el block clicado; si no hay, usar el block en hover
 	const activeBlock = clickedBlock || hoveredBlock || null
 
-	// 计算图片的缩放比例和偏移量
+	// Calcular la escala y el desplazamiento de la imagen
 	const [imageScale, setImageScale] = useState({ x: 1, y: 1, offsetX: 0, offsetY: 0 })
 	useEffect(() => {
 		if (!imageRef.current || file?.type === 'application/pdf') return
@@ -52,18 +52,18 @@ export function FilePreview({ file, result }: FilePreviewProps) {
 			const containerRect = img.parentElement?.getBoundingClientRect()
 			if (!containerRect) return
 
-			// 计算缩放比例（显示尺寸 / 原始尺寸）
+			// Calcular la escala (tamaño mostrado / tamaño original)
 			const scaleX = imgRect.width / img.naturalWidth
 			const scaleY = imgRect.height / img.naturalHeight
 
-			// 计算图片在容器中的偏移量（考虑 object-contain 的居中效果）
+			// Calcular el desplazamiento de la imagen en el contenedor (efecto de centrado de object-contain)
 			const offsetX = imgRect.left - containerRect.left
 			const offsetY = imgRect.top - containerRect.top
 
 			setImageScale({ x: scaleX, y: scaleY, offsetX, offsetY })
 		}
 
-		// 图片加载完成后更新
+		// Actualizar cuando la imagen haya cargado
 		const img = imageRef.current
 		if (img.complete) {
 			updateImageScale()
@@ -71,7 +71,7 @@ export function FilePreview({ file, result }: FilePreviewProps) {
 			img.addEventListener('load', updateImageScale)
 		}
 
-		// 监听窗口大小变化
+		// Escuchar cambios de tamaño de la ventana
 		window.addEventListener('resize', updateImageScale)
 
 		return () => {
@@ -90,7 +90,7 @@ export function FilePreview({ file, result }: FilePreviewProps) {
 		pdfOriginalHeight
 	)
 
-	// 使用 block 交互 hook
+	// Usar el hook de interacción con blocks
 	const {
 		handlePdfClick,
 		handlePdfMouseMove,
@@ -106,7 +106,7 @@ export function FilePreview({ file, result }: FilePreviewProps) {
 		setShowCopyButton
 	})
 
-	// 使用滚动 hook
+	// Usar el hook de scroll
 	usePdfScrollToBlock(
 		clickedBlockId,
 		clickedBlock ?? null,
@@ -122,7 +122,7 @@ export function FilePreview({ file, result }: FilePreviewProps) {
 		}
 	}, [hoveredBlockId, clickedBlockId])
 
-	// 当文件变化时，创建 URL
+	// Al cambiar el archivo, crear la URL
 	useEffect(() => {
 		if (file && (file.type === 'application/pdf' || file.type.startsWith('image/'))) {
 			const url = URL.createObjectURL(file.file)
@@ -166,7 +166,7 @@ export function FilePreview({ file, result }: FilePreviewProps) {
 		return (
 			<div className='h-full flex items-center justify-center bg-gray-50 dark:bg-gray-900'>
 				<div className='text-center text-gray-500'>
-					<p className='text-lg'>请选择或上传文件</p>
+					<p className='text-lg'>Selecciona o sube un archivo</p>
 				</div>
 			</div>
 		)
@@ -212,7 +212,7 @@ export function FilePreview({ file, result }: FilePreviewProps) {
 					</div>
 				) : (
 					<div className='h-full flex items-center justify-center text-gray-500'>
-						<p>不支持的文件格式</p>
+						<p>Formato de archivo no soportado</p>
 					</div>
 				)}
 			</div>

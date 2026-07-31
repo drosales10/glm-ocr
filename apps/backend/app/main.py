@@ -1,5 +1,5 @@
 """
-FastAPI应用入口
+Punto de entrada de la aplicación FastAPI
 """
 import sys
 from pathlib import Path
@@ -19,33 +19,33 @@ from app.utils.config import settings
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """应用生命周期管理"""
-    # 启动时
+    """Gestión del ciclo de vida de la aplicación"""
+    # Al iniciar
     logger.info("Application starting up...")
 
-    # 1. 初始化数据库
+    # 1. Inicializar la base de datos
     await init_db()
 
-    # 2. 初始化任务系统
+    # 2. Inicializar el sistema de tareas
     await init_task_system()
 
     logger.info("Application startup complete")
 
     yield
 
-    # 关闭时
+    # Al cerrar
     logger.info("Application shutting down...")
 
-    # 1. 关闭任务系统
+    # 1. Cerrar el sistema de tareas
     await shutdown_task_system()
 
-    # 2. 关闭数据库连接
+    # 2. Cerrar la conexión a la base de datos
     await close_db()
 
     logger.info("Application shutdown complete")
 
 
-# 创建FastAPI应用
+# Crear la aplicación FastAPI
 app = FastAPI(
     title=f"{settings.APP_NAME}",
     description="Async task execution system",
@@ -53,7 +53,7 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS配置
+# Configuración CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -62,14 +62,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 注册路由
+# Registrar rutas
 app.include_router(tasks_router, prefix="/api/v1")
 app.include_router(system_router, prefix="/api/v1")
 
 
 @app.get("/")
 async def root():
-    """根路径"""
+    """Ruta raíz"""
     return {
         "name": settings.APP_NAME,
         "version": settings.APP_VERSION,
@@ -79,7 +79,7 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    """健康检查"""
+    """Comprobación de salud"""
     return {
         "status": "healthy",
         "version": settings.APP_VERSION

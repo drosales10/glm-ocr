@@ -1,5 +1,5 @@
 """
-处理步骤模块
+Módulo de pasos de procesamiento
 """
 
 __all__ = []

@@ -24,11 +24,11 @@ export function usePdfScrollToBlock(
 		)
 			return
 
-		// 标记正在滚动，防止触发其他更新
+		// Marcar que se está haciendo scroll para evitar otras actualizaciones
 		isScrollingRef.current = true
 
 		const scrollToBlock = () => {
-			// 查找 PDF 查看器的滚动容器（PdfViewer 内部）
+			// Buscar el contenedor de scroll del visor PDF (dentro de PdfViewer)
 			const scrollContainer = viewerRef.current?.querySelector(
 				'.pdf-scroll-container'
 			) as HTMLElement
@@ -40,7 +40,7 @@ export function usePdfScrollToBlock(
 
 			const pageNumber = clickedBlock.pageIndex ?? 1
 
-			// 先尝试查找页面元素
+			// Intentar primero encontrar el elemento de la página
 			let pageWrapper = viewerRef.current?.querySelector(
 				`[data-pdf-page="${pageNumber}"]`
 			) as HTMLElement | null
@@ -48,9 +48,9 @@ export function usePdfScrollToBlock(
 				'.react-pdf__Page__canvas'
 			) as HTMLCanvasElement | null
 
-			// 如果页面还未渲染，先滚动到目标页面的大概位置
+			// Si la página aún no está renderizada, desplazarse primero a su posición aproximada
 			if (!pageWrapper || !canvas) {
-				// 尝试从已渲染的页面获取当前缩放比例
+				// Intentar obtener la escala actual desde una página ya renderizada
 				let currentScale = 1
 				const visibleRenderedPage = viewerRef.current?.querySelector(
 					'[data-pdf-visible]'
@@ -60,29 +60,29 @@ export function usePdfScrollToBlock(
 				) as HTMLCanvasElement | null
 
 				if (visibleCanvas && visibleRenderedPage) {
-					// 从第一个已渲染页面推断缩放比例
+					// Inferir la escala desde la primera página renderizada
 					const displayHeight = visibleRenderedPage.getBoundingClientRect().height
 					if (pdfOriginalHeight > 0) {
 						currentScale = displayHeight / pdfOriginalHeight
 					}
 				}
 
-				// 计算目标页面的累计高度（考虑缩放）
-				let pageOffset = 20 // 容器 padding
+				// Calcular la altura acumulada de la página destino (considerando la escala)
+				let pageOffset = 20 // padding del contenedor
 				for (let i = 1; i < pageNumber; i++) {
 					const pageHeight = pdfOriginalHeight * currentScale
-					pageOffset += pageHeight + 20 // 页面高度 + 间距
+					pageOffset += pageHeight + 20 // altura de página + espaciado
 				}
 
-				// 先滚动到页面顶部
+				// Desplazarse primero a la parte superior de la página
 				scrollContainer.scrollTo({
 					top: pageOffset,
 					behavior: 'instant'
 				})
 
-				// 等待页面渲染，然后重试
+				// Esperar a que la página se renderice y reintentar
 				let retryCount = 0
-				const maxRetries = 50 // 最多重试 50 次（约 5 秒）
+				const maxRetries = 50 // Máximo 50 reintentos (aprox. 5 segundos)
 				const checkAndScroll = () => {
 					retryCount++
 					if (retryCount > maxRetries) {
@@ -98,61 +98,61 @@ export function usePdfScrollToBlock(
 					) as HTMLCanvasElement | null
 
 					if (!pageWrapper || !canvas) {
-						// 如果还没渲染，继续等待
+						// Si aún no está renderizada, seguir esperando
 						requestAnimationFrame(checkAndScroll)
 						return
 					}
 
-					// 页面已渲染，执行精确定位
+					// Página renderizada: realizar posicionamiento preciso
 					performPreciseScroll(scrollContainer, pageWrapper, canvas)
 				}
 
-				// 延迟一下再开始检查，给虚拟渲染一些时间
+				// Retrasar un poco el inicio de la comprobación para dar tiempo al renderizado virtual
 				setTimeout(() => {
 					checkAndScroll()
 				}, 100)
 				return
 			}
 
-			// 页面已渲染，直接执行精确定位
+			// Página ya renderizada: realizar posicionamiento preciso directamente
 			performPreciseScroll(scrollContainer, pageWrapper, canvas)
 		}
 
-		// 执行精确定位到 block
+		// Realizar posicionamiento preciso hasta el block
 		const performPreciseScroll = (
 			scrollContainer: HTMLElement,
 			pageWrapper: HTMLElement,
 			canvas: HTMLCanvasElement
 		) => {
-			// 获取页面元素在滚动容器中的位置
+			// Obtener la posición del elemento de página dentro del contenedor de scroll
 			const pageRect = pageWrapper.getBoundingClientRect()
 			const containerRect = scrollContainer.getBoundingClientRect()
 
-			// 计算页面相对于滚动容器的偏移
+			// Calcular el desplazamiento de la página relativo al contenedor de scroll
 			const pageOffsetY = pageRect.top - containerRect.top + scrollContainer.scrollTop
 
 			const canvasRect = canvas.getBoundingClientRect()
 			const scaleY = canvasRect.height / pdfOriginalHeight
 
-			// bbox 现在是相对坐标（每页内的坐标），直接使用
+			// bbox ahora son coordenadas relativas (dentro de cada página); usarlas directamente
 			const yWithinPage = clickedBlock.bbox?.[1] ?? 0
 
-			// 计算目标位置：页面偏移 + bbox 的 y 坐标 * 缩放比例
-			const targetY = pageOffsetY + yWithinPage * scaleY - 100 // 100px 的顶部边距
+			// Calcular posición destino: desplazamiento de página + coordenada y del bbox * escala
+			const targetY = pageOffsetY + yWithinPage * scaleY - 100 // margen superior de 100px
 
-			// 执行滚动
+			// Ejecutar el scroll
 			scrollContainer.scrollTo({
 				top: targetY,
 				behavior: 'instant'
 			})
 
-			// 滚动完成后重置标志
+			// Reiniciar la bandera tras completar el scroll
 			setTimeout(() => {
 				isScrollingRef.current = false
-			}, 100) // 短暂延迟以确保滚动完成
+			}, 100) // breve retraso para asegurar que el scroll haya terminado
 		}
 
-		// 延迟执行以确保页面信息已更新
+		// Retrasar la ejecución para asegurar que la información de página esté actualizada
 		const timer = setTimeout(scrollToBlock, 200)
 		return () => {
 			clearTimeout(timer)

@@ -1,5 +1,5 @@
 """
-Word文档转换器
+Convertidor de documentos Word
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from app.utils.logger import logger
 
 
 class WordConverter(BaseConverter):
-    """Word文档转PDF转换器"""
+    """Convertidor de documentos Word a PDF"""
 
     name = "word_converter"
 
@@ -25,7 +25,7 @@ class WordConverter(BaseConverter):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        # 根据环境选择LibreOffice命令
+        # Elegir el comando de LibreOffice según el entorno
         self.libreoffice_cmd = (
             "soffice" if settings.environment == "development" else "libreoffice"
         )
@@ -36,26 +36,26 @@ class WordConverter(BaseConverter):
         output_dir: str,
         **kwargs
     ) -> Dict[str, Any]:
-        """将Word文档转换为PDF
+        """Convierte un documento Word a PDF
 
         Args:
-            file_path: Word文档路径
-            output_dir: 输出目录
-            **kwargs: 其他参数
+            file_path: Ruta del documento Word
+            output_dir: Directorio de salida
+            **kwargs: Otros parámetros
 
         Returns:
-            Dict: 转换结果（包含PDF文件路径）
+            Dict: Resultado de la conversión (incluye la ruta del archivo PDF)
         """
         self.ensure_output_dir(output_dir)
 
         try:
-            # 创建临时目录用于转换
+            # Crear un directorio temporal para la conversión
             temp_dir = tempfile.mkdtemp(prefix="word_convert_")
 
             try:
-                logger.info(f"开始转换Word文档到PDF: {file_path}")
+                logger.info(f"Iniciando conversión de documento Word a PDF: {file_path}")
 
-                # 使用LibreOffice进行转换
+                # Usar LibreOffice para la conversión
                 cmd = [
                     self.libreoffice_cmd,
                     "--headless",
@@ -64,41 +64,41 @@ class WordConverter(BaseConverter):
                     file_path
                 ]
 
-                logger.info(f"执行命令: {' '.join(cmd)}")
+                logger.info(f"Ejecutando comando: {' '.join(cmd)}")
 
-                # 执行转换命令
+                # Ejecutar el comando de conversión
                 result = subprocess.run(
                     cmd,
                     capture_output=True,
                     text=True,
-                    timeout=120,  # 2分钟超时
+                    timeout=120,  # tiempo de espera de 2 minutos
                     check=True
                 )
 
-                logger.info(f"LibreOffice输出: {result.stdout}")
+                logger.info(f"Salida de LibreOffice: {result.stdout}")
                 if result.stderr:
-                    logger.warning(f"LibreOffice警告: {result.stderr}")
+                    logger.warning(f"Advertencia de LibreOffice: {result.stderr}")
 
-                # 查找生成的PDF文件
+                # Buscar el archivo PDF generado
                 word_filename = os.path.basename(file_path)
                 pdf_filename = os.path.splitext(word_filename)[0] + ".pdf"
                 pdf_path = os.path.join(temp_dir, pdf_filename)
 
                 if not os.path.exists(pdf_path):
-                    # 尝试查找任何生成的PDF文件
+                    # Intentar encontrar cualquier PDF generado
                     pdf_files = [f for f in os.listdir(temp_dir) if f.endswith('.pdf')]
                     if pdf_files:
                         pdf_path = os.path.join(temp_dir, pdf_files[0])
                     else:
-                        raise FileNotFoundError(f"LibreOffice未生成PDF文件: {file_path}")
+                        raise FileNotFoundError(f"LibreOffice no generó el archivo PDF: {file_path}")
 
-                # 将PDF文件移动到最终输出目录
+                # Mover el PDF al directorio de salida final
                 final_pdf_path = os.path.join(output_dir, os.path.basename(pdf_path))
                 shutil.move(pdf_path, final_pdf_path)
 
-                logger.info(f"Word文档转换成功，PDF已保存到: {final_pdf_path}")
+                logger.info(f"Documento Word convertido correctamente, PDF guardado en: {final_pdf_path}")
 
-                # 返回转换结果
+                # Devolver el resultado de la conversión
                 metadata = self.get_metadata(file_path)
                 metadata.update({
                     "converted_from": "word_document",
@@ -108,57 +108,57 @@ class WordConverter(BaseConverter):
 
                 return {
                     "output_files": [final_pdf_path],
-                    "page_count": 0,  # Word转PDF后需要PDF转换器来确定页数
+                    "page_count": 0,  # Tras Word→PDF, el convertidor PDF determina el número de páginas
                     "metadata": metadata,
-                    "pdf_path": final_pdf_path,  # 额外返回PDF路径供后续使用
+                    "pdf_path": final_pdf_path,  # También se devuelve la ruta del PDF para uso posterior
                 }
 
             finally:
-                # 清理临时目录
+                # Limpiar el directorio temporal
                 try:
                     shutil.rmtree(temp_dir, ignore_errors=True)
                 except Exception as e:
-                    logger.warning(f"清理临时目录失败: {str(e)}")
+                    logger.warning(f"Error al limpiar el directorio temporal: {str(e)}")
 
         except subprocess.TimeoutExpired as e:
-            logger.error("Word文档转换超时")
+            logger.error("Tiempo de espera agotado al convertir el documento Word")
             raise ConversionTimeoutError(
-                "Word文档转换超时，请检查文件是否过大或LibreOffice是否正常运行"
+                "Tiempo de espera agotado al convertir el documento Word; compruebe si el archivo es demasiado grande o si LibreOffice funciona correctamente"
             ) from e
         except subprocess.CalledProcessError as e:
-            logger.error(f"LibreOffice转换失败: {e.stderr}")
-            raise ConversionFailedError(f"Word文档转换失败: {e.stderr}") from e
+            logger.error(f"Error de conversión de LibreOffice: {e.stderr}")
+            raise ConversionFailedError(f"Error al convertir el documento Word: {e.stderr}") from e
         except Exception as e:
-            logger.error(f"Word文档转换异常: {str(e)}")
-            raise ConversionFailedError(f"Word文档转换异常: {str(e)}") from e
+            logger.error(f"Excepción al convertir el documento Word: {str(e)}")
+            raise ConversionFailedError(f"Excepción al convertir el documento Word: {str(e)}") from e
 
     async def validate(self, file_path: str) -> bool:
-        """验证Word文档和LibreOffice环境
+        """Valida el documento Word y el entorno de LibreOffice
 
         Args:
-            file_path: Word文档路径
+            file_path: Ruta del documento Word
 
         Returns:
-            bool: 是否有效
+            bool: Si es válido
         """
         try:
-            # 检查文件是否存在
+            # Comprobar si el archivo existe
             if not os.path.exists(file_path):
-                logger.error(f"Word文档不存在: {file_path}")
+                logger.error(f"El documento Word no existe: {file_path}")
                 return False
 
-            # 检查文件扩展名
+            # Comprobar la extensión del archivo
             if not self.can_handle(file_path):
-                logger.error(f"不是Word文档: {file_path}")
+                logger.error(f"No es un documento Word: {file_path}")
                 return False
 
-            # 检查文件大小
+            # Comprobar el tamaño del archivo
             file_size = os.path.getsize(file_path)
             if file_size == 0:
-                logger.error("Word文档为空")
+                logger.error("El documento Word está vacío")
                 return False
 
-            # 检查LibreOffice是否可用
+            # Comprobar si LibreOffice está disponible
             try:
                 result = subprocess.run(
                     [self.libreoffice_cmd, "--version"],
@@ -166,18 +166,18 @@ class WordConverter(BaseConverter):
                     timeout=5
                 )
                 if result.returncode == 0:
-                    logger.info(f"Word文档验证通过，LibreOffice可用")
+                    logger.info(f"Validación de documento Word correcta, LibreOffice disponible")
                     return True
                 else:
-                    logger.error("LibreOffice未安装或不可用，无法转换Word文档")
+                    logger.error("LibreOffice no está instalado o no está disponible; no se puede convertir el documento Word")
                     return False
             except FileNotFoundError:
-                logger.error("未找到LibreOffice，无法转换Word文档")
+                logger.error("No se encontró LibreOffice; no se puede convertir el documento Word")
                 return False
             except Exception as e:
-                logger.error(f"LibreOffice检查失败: {str(e)}")
+                logger.error(f"Error al comprobar LibreOffice: {str(e)}")
                 return False
 
         except Exception as e:
-            logger.error(f"Word文档验证失败: {str(e)}")
+            logger.error(f"Error al validar el documento Word: {str(e)}")
             return False

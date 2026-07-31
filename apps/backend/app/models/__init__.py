@@ -1,5 +1,5 @@
 """
-数据模型
+Modelos de datos
 """
 
 from app.models.base import Base

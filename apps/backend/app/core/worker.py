@@ -1,5 +1,5 @@
 """
-任务Worker实现
+Implementación del Worker de tareas
 """
 import asyncio
 import uuid
@@ -18,7 +18,7 @@ from app.utils.logger import logger
 
 @dataclass
 class WorkerMetrics:
-    """Worker统计信息"""
+    """Estadísticas del Worker"""
     worker_id: str
     tasks_started: int = 0
     tasks_completed: int = 0
@@ -26,12 +26,12 @@ class WorkerMetrics:
     total_execution_time: float = 0.0
 
     def record_execution_time(self, time: float):
-        """记录执行时间"""
+        """Registra el tiempo de ejecución"""
         self.total_execution_time += time
 
     @property
     def avg_execution_time(self) -> float:
-        """平均执行时间"""
+        """Tiempo medio de ejecución"""
         if self.tasks_completed == 0:
             return 0.0
         return self.total_execution_time / self.tasks_completed
@@ -39,9 +39,9 @@ class WorkerMetrics:
 
 class Worker:
     """
-    任务Worker
+    Worker de tareas
 
-    从任务队列中获取任务并执行
+    Obtiene tareas de la cola y las ejecuta
     """
 
     def __init__(
@@ -54,18 +54,18 @@ class Worker:
         self.poll_interval = poll_interval
         self.task_timeout = task_timeout
 
-        # 当前任务
+        # Tarea actual
         self.current_task_id: Optional[str] = None
         self.is_running = False
         self._stop_event = asyncio.Event()
 
-        # 统计信息
+        # Estadísticas
         self.metrics = WorkerMetrics(worker_id=self.worker_id)
 
         logger.info(f"Worker initialized: {self.worker_id}")
 
     async def start(self):
-        """启动Worker"""
+        """Inicia el Worker"""
         if self.is_running:
             logger.warning(f"Worker {self.worker_id} is already running")
             return
@@ -74,11 +74,11 @@ class Worker:
         self.is_running = True
         self._stop_event.clear()
 
-        # 启动主循环
+        # Iniciar el bucle principal
         await self._main_loop()
 
     async def stop(self):
-        """停止Worker"""
+        """Detiene el Worker"""
         if not self.is_running:
             return
 
@@ -86,7 +86,7 @@ class Worker:
         self.is_running = False
         self._stop_event.set()
 
-        # 等待当前任务完成（最多等待30秒）
+        # Esperar a que termine la tarea actual (máximo 30 segundos)
         if self.current_task_id:
             logger.info(f"Waiting for current task to complete: {self.current_task_id}")
             await asyncio.sleep(30)
@@ -94,24 +94,24 @@ class Worker:
         logger.info(f"Worker stopped: {self.worker_id}")
 
     async def _main_loop(self):
-        """Worker主循环"""
+        """Bucle principal del Worker"""
         logger.info(f"Worker main loop started: {self.worker_id}")
 
         while not self._stop_event.is_set():
             try:
-                # 如果已有任务在执行，等待完成
+                # Si ya hay una tarea en ejecución, esperar a que termine
                 if self.current_task_id:
                     await asyncio.sleep(1)
                     continue
 
-                # 获取新任务
+                # Obtener una nueva tarea
                 task = await self._acquire_task()
 
                 if task:
-                    # 处理任务
+                    # Procesar la tarea
                     await self._process_task(task)
                 else:
-                    # 没有任务，等待一段时间
+                    # No hay tareas; esperar un momento
                     await asyncio.sleep(self.poll_interval)
 
             except asyncio.CancelledError:
@@ -124,13 +124,13 @@ class Worker:
         logger.info(f"Worker main loop stopped: {self.worker_id}")
 
     async def _acquire_task(self) -> Optional[Task]:
-        """获取待处理任务"""
+        """Obtiene tareas pendientes"""
         try:
             async with AsyncSessionLocal() as db:
                 task_repo = TaskRepository(db)
                 lock_manager = LockManager(db, self.task_timeout)
 
-                # 获取待处理任务
+                # Obtiene tareas pendientes
                 pending_tasks = await task_repo.get_pending_tasks(limit=1)
 
                 if not pending_tasks:
@@ -138,7 +138,7 @@ class Worker:
 
                 task = pending_tasks[0]
 
-                # 尝试获取锁
+                # Intentar adquirir el bloqueo
                 locked_task = await lock_manager.acquire(
                     task_id=task.task_id,
                     worker_id=self.worker_id,
@@ -157,7 +157,7 @@ class Worker:
             return None
 
     async def _process_task(self, task: Task):
-        """处理单个任务"""
+        """Procesa una sola tarea"""
         self.current_task_id = task.task_id
         self.metrics.tasks_started += 1
 
@@ -171,10 +171,10 @@ class Worker:
                 retry_handler = RetryHandler(task_repo)
 
                 try:
-                    # 创建进度回调
+                    # Crea el callback de progreso
                     progress_callback = self._create_progress_callback(task.task_id, db)
 
-                    # 创建处理上下文
+                    # Crear el contexto de procesamiento
                     context = ProcessingContext(
                         task_id=task.task_id,
                         document_id=task.document_id,
@@ -187,23 +187,23 @@ class Worker:
                         progress_callback=progress_callback
                     )
 
-                    # 获取处理流程
+                    # Obtener el flujo de procesamiento
                     flow = FlowFactory.create_flow(
                         processing_mode=task.processing_mode,
                         context=context
                     )
 
-                    # 执行流程
+                    # Ejecutar el flujo
                     result = await flow.process()
 
-                    # 任务成功
+                    # Tarea exitosa
                     await lock_manager.release(
                         task_id=task.task_id,
                         worker_id=self.worker_id,
                         status=TaskStatus.COMPLETED
                     )
 
-                    # 更新结果
+                    # Actualizar el resultado
                     await task_repo.update_task_status(
                         task_id=task.task_id,
                         status=TaskStatus.COMPLETED,
@@ -224,13 +224,13 @@ class Worker:
                     )
 
                 except Exception as e:
-                    # 处理过程中的异常
+                    # Excepción durante el procesamiento
                     await db.rollback()
 
-                    # 分类错误
+                    # Clasificar el error
                     error_type = self._classify_error(str(e))
 
-                    # 处理重试
+                    # Gestionar el reintento
                     can_retry = await retry_handler.handle_failure(
                         task=task,
                         error_message=str(e),
@@ -257,10 +257,10 @@ class Worker:
             self.current_task_id = None
 
     def _create_progress_callback(self, task_id: str, db):
-        """创建进度回调"""
+        """Crea el callback de progreso"""
         async def callback(progress_info):
-            # 进度回调已经在流程中通过context更新了数据库
-            # 这里主要用于日志记录
+            # El callback de progreso ya actualiza la base de datos mediante el context en el flujo
+            # Aquí se usa principalmente para registrar logs
             logger.debug(
                 f"Task {task_id} progress: "
                 f"{progress_info.step_name} - {progress_info.overall_progress:.1f}%"
@@ -269,13 +269,13 @@ class Worker:
 
     def _classify_error(self, error_message: str) -> str:
         """
-        分类错误类型
+        Clasifica el tipo de error
 
         Args:
-            error_message: 错误信息
+            error_message: Mensaje de error
 
         Returns:
-            str: 错误类型
+            str: Tipo de error
         """
         error_message_lower = error_message.lower()
 

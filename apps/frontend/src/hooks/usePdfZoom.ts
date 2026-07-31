@@ -26,7 +26,7 @@ export function usePdfZoom({ initialScale = 1.0, onScaleChange }: UsePdfZoomOpti
 	}, [onScaleChange])
 
 	const resetZoom = useCallback(() => {
-		isInitialScaleSetRef.current = false // 重置标记，允许重新计算自适应缩放
+		isInitialScaleSetRef.current = false // Reiniciar marca para permitir recalcular el zoom adaptativo
 		setScale(1.0)
 		onScaleChange?.(1.0)
 	}, [onScaleChange])

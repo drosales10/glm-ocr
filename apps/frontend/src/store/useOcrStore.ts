@@ -11,8 +11,8 @@ export interface Block {
 }
 
 interface OcrStore {
-	hoveredBlockId: number | null  // 悬停的 block id
-	clickedBlockId: number | null  // 点击的 block id
+	hoveredBlockId: number | null  // id del block en hover
+	clickedBlockId: number | null  // id del block clicado
 	clickedPdfBlockId: number | null
 	blocks: Block[]
 	setHoveredBlockId: (blockId: number | null) => void

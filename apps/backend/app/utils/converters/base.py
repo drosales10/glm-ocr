@@ -1,5 +1,5 @@
 """
-转换器基类
+Clase base de convertidores
 """
 
 from __future__ import annotations
@@ -13,19 +13,19 @@ from app.utils.logger import logger
 
 
 class BaseConverter(ABC):
-    """转换器基类"""
+    """Clase base de convertidores"""
 
-    # 转换器名称
+    # Nombre del convertidor
     name: str = "base"
 
-    # 支持的文件扩展名
+    # Extensiones de archivo admitidas
     supported_extensions: set[str] = set()
 
     def __init__(self, **kwargs):
-        """初始化转换器
+        """Inicializa el convertidor
 
         Args:
-            **kwargs: 转换器特定配置
+            **kwargs: Configuración específica del convertidor
         """
         self.config = kwargs
 
@@ -33,61 +33,61 @@ class BaseConverter(ABC):
     async def convert(
         self, file_path: str, output_dir: str, **kwargs
     ) -> Dict[str, Any]:
-        """转换文件
+        """Convierte el archivo
 
         Args:
-            file_path: 输入文件路径
-            output_dir: 输出目录
-            **kwargs: 转换参数（如 dpi, format 等）
+            file_path: Ruta del archivo de entrada
+            output_dir: Directorio de salida
+            **kwargs: Parámetros de conversión (p. ej. dpi, format)
 
         Returns:
             Dict: {
-                "output_files": List[str],  # 输出文件列表
-                "page_count": int,           # 页数/图片数
-                "metadata": Dict             # 元数据
+                "output_files": List[str],  # Lista de archivos de salida
+                "page_count": int,           # Número de páginas/imágenes
+                "metadata": Dict             # Metadatos
             }
 
         Raises:
-            ConversionFailedError: 转换失败
-            ConversionTimeoutError: 转换超时
+            ConversionFailedError: Conversión fallida
+            ConversionTimeoutError: Tiempo de espera de conversión agotado
         """
         pass
 
     @abstractmethod
     async def validate(self, file_path: str) -> bool:
-        """验证文件是否可以被此转换器处理
+        """Valida si el archivo puede ser procesado por este convertidor
 
         Args:
-            file_path: 文件路径
+            file_path: Ruta del archivo
 
         Returns:
-            bool: 是否可以处理该文件
+            bool: Si se puede procesar el archivo
 
         Raises:
-            ConverterValidationError: 验证失败
+            ConverterValidationError: Validación fallida
         """
         pass
 
     def can_handle(self, file_path: str) -> bool:
-        """检查转换器是否可以处理该文件
+        """Comprueba si el convertidor puede procesar el archivo
 
         Args:
-            file_path: 文件路径
+            file_path: Ruta del archivo
 
         Returns:
-            bool: 是否可以处理
+            bool: Si se puede procesar
         """
         extension = Path(file_path).suffix.lower()
         return extension in self.supported_extensions
 
     def get_metadata(self, file_path: str) -> Dict[str, Any]:
-        """获取文件元数据
+        """Obtiene los metadatos del archivo
 
         Args:
-            file_path: 文件路径
+            file_path: Ruta del archivo
 
         Returns:
-            Dict: 元数据字典
+            Dict: Diccionario de metadatos
         """
         return {
             "source_file": file_path,
@@ -96,10 +96,10 @@ class BaseConverter(ABC):
         }
 
     def ensure_output_dir(self, output_dir: str) -> None:
-        """确保输出目录存在
+        """Asegura que el directorio de salida exista
 
         Args:
-            output_dir: 输出目录路径
+            output_dir: Ruta del directorio de salida
         """
         os.makedirs(output_dir, exist_ok=True)
 

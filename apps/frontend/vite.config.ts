@@ -13,6 +13,7 @@ export default defineConfig({
     tanstackRouter({
       target: 'react',
       autoCodeSplitting: true,
+      routeFileIgnorePattern: '(FileUpload|FilePreview|OCRPage|OCRResults|testImage|testData)\\.',
     }),
     viteReact(),
     tailwindcss(),
@@ -23,17 +24,18 @@ export default defineConfig({
     },
   },
   server: {
-    // 监听所有地址，方便其他设备访问
+    // Escuchar en todas las direcciones para facilitar el acceso desde otros dispositivos
     host: '0.0.0.0',
-    // 代理后端请求，避免跨域和连接问题
+    // Proxy de peticiones al backend para evitar problemas de CORS y conexión
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,
-        // 不重写路径，保持 /api/v1/...
+        // No reescribir la ruta; mantener /api/v1/...
         rewrite: (path) => path,
       },
     },
+
   },
 
 })

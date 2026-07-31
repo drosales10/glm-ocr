@@ -1,5 +1,5 @@
 """
-系统监控API
+API de monitoreo del sistema
 """
 from fastapi import APIRouter, HTTPException, status
 
@@ -15,15 +15,15 @@ router = APIRouter(prefix="/system", tags=["system"])
 @router.get("/metrics", response_model=MetricsResponse)
 async def get_metrics():
     """
-    获取系统指标
+    Obtiene las métricas del sistema
 
-    返回任务和Worker的统计信息
+    Devuelve estadísticas de tareas y Workers
     """
     try:
         task_manager = get_task_manager()
         metrics = await task_manager.get_metrics()
 
-        # 直接返回，FastAPI会自动验证
+        # Devolver directamente; FastAPI validará automáticamente
         return metrics
 
     except Exception as e:
@@ -37,7 +37,7 @@ async def get_metrics():
 @router.get("/health", response_model=HealthResponse)
 async def health_check():
     """
-    健康检查
+    Comprobación de salud
     """
     try:
         task_manager = get_task_manager()

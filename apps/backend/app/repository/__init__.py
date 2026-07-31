@@ -1,5 +1,5 @@
 """
-Repository层
+Capa Repository
 """
 
 from app.repository.base import BaseRepository

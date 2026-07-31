@@ -80,6 +80,7 @@ export function FileUpload({ onFileUploaded, onTaskStatusChange }: FileUploadPro
 	const mountedRef = useRef(true)
 
 	useEffect(() => {
+		mountedRef.current = true
 		return () => {
 			mountedRef.current = false
 		}
@@ -119,11 +120,24 @@ export function FileUpload({ onFileUploaded, onTaskStatusChange }: FileUploadPro
 	}
 
 	const pollTask = async (fileId: string, taskId: string | number) => {
+		let consecutiveErrors = 0
 		while (mountedRef.current) {
 			try {
-				const response = await getTaskStatus(taskId)
+				let response = await getTaskStatus(taskId)
+				consecutiveErrors = 0
+
+				// Evitar carrera: a veces status=completed llega antes de merged.json
+				if (
+					response.status === 'completed' &&
+					!response.full_markdown &&
+					!(response.layout && response.layout.length)
+				) {
+					await new Promise(resolve => setTimeout(resolve, 800))
+					response = await getTaskStatus(taskId)
+				}
+
 				const step = response.current_step ?? response.current_stage ?? null
-				updateQueueItem(fileId, response.status, response.error_message, response.progress, step)
+				updateQueueItem(fileId, response.status, null, response.progress, step)
 				onTaskStatusChange?.({
 					fileId,
 					status: response.status,
@@ -131,10 +145,35 @@ export function FileUpload({ onFileUploaded, onTaskStatusChange }: FileUploadPro
 					error_message: response.error_message
 				})
 
-				if (response.status === 'completed' || response.status === 'failed') return
+				if (response.status === 'completed' || response.status === 'failed') {
+					if (response.status === 'failed') {
+						updateQueueItem(fileId, 'failed', response.error_message)
+					}
+					return
+				}
 				await new Promise(resolve => setTimeout(resolve, 2000))
 			} catch (error: any) {
+				consecutiveErrors += 1
 				const message = error.response?.data?.message || error.message || 'No se pudo consultar la tarea'
+				const isTransient =
+					!error.response &&
+					(String(message).includes('timeout') ||
+						String(message).includes('Network') ||
+						error.code === 'ECONNABORTED' ||
+						error.code === 'ERR_NETWORK')
+
+				if (isTransient && consecutiveErrors < 30) {
+					updateQueueItem(
+						fileId,
+						'processing',
+						null,
+						undefined,
+						`Esperando al servidor… (reintento ${consecutiveErrors})`
+					)
+					await new Promise(resolve => setTimeout(resolve, 3000))
+					continue
+				}
+
 				updateQueueItem(fileId, 'failed', message)
 				onTaskStatusChange?.({ fileId, status: 'failed', response: null, error_message: message })
 				return

@@ -22,7 +22,7 @@ export function OCRPage() {
 	const handleTaskStatusChange = (response: TaskResponse) => {
 		setTaskResponses(current => ({ ...current, [response.fileId]: response }))
 		if (response.status === 'completed' || response.status === 'failed') {
-			setActiveFileId(current => current ?? response.fileId)
+			setActiveFileId(response.fileId)
 		}
 	}
 

@@ -71,13 +71,13 @@ class LayoutAndOCRClient:
     # Prompt predeterminado de layout y OCR
     DEFAULT_PROMPT = "<|PIPELINE_DOCUMENT_RECOGNITION|>"
 
-    def __init__(self, service_url: Optional[str] = None, timeout: float = 600.0):
+    def __init__(self, service_url: Optional[str] = None, timeout: float = 1800.0):
         """Inicializa el cliente LayoutAndOCR.
 
         Args:
             service_url: URL del servicio. Si es None, se carga desde la configuración.
-            timeout: Tiempo de espera de la solicitud (segundos). Por defecto 10 min
-                para documentos grandes en despliegue local.
+            timeout: Tiempo de espera de la solicitud (segundos). Por defecto 30 min
+                para documentos densos en despliegue local.
         """
         self.service_url = service_url or getattr(settings, "layout_ocr_url", None)
         if not self.service_url:
@@ -196,7 +196,9 @@ class LayoutAndOCRClient:
 
         try:
             async with httpx.AsyncClient(
-                headers=self.async_headers, timeout=self.timeout, verify=False
+                headers=self.async_headers,
+                timeout=httpx.Timeout(self.timeout, connect=30.0),
+                verify=False,
             ) as client:
                 response = await client.post(url, json=payload)
 

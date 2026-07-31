@@ -17,15 +17,15 @@ pipeline:
     api_path: /api/generate
     model: glm-ocr:latest
     api_mode: ollama_generate
-    request_timeout: 600
+    request_timeout: 1800
 
   # Concurrencia baja: evita saturar VRAM de 8 GB
   max_workers: 2
 
   layout:
     model_dir: PaddlePaddle/PP-DocLayoutV3_safetensors
-    # CUDA acelera el layout; si hay OOM, cambia a cpu
-    device: cuda
+    # CUDA acelera el layout; en 8 GB VRAM deja la GPU libre para Ollama
+    device: cpu
     batch_size: 1
     label_task_mapping:
       text:

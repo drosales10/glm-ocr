@@ -2,46 +2,37 @@ import axios from 'axios'
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
 
-// Crear instancia de axios
+// Subida: timeout moderado. El OCR en sí es asíncrono (cola de tareas).
 const api = axios.create({
 	baseURL: BASE_URL,
-	// OCR local puede tardar varios minutos (layout + regiones)
-	timeout: 600000
+	timeout: 120000
 })
 
-// Interceptor de peticiones
-api.interceptors.request.use(
-	config => {
-		// Aquí se puede añadir token u otra información de autenticación
-		return config
-	},
-	error => {
-		return Promise.reject(error)
-	}
-)
+// Polling de estado: sin timeout de cliente (el OCR puede durar >10 min).
+const statusApi = axios.create({
+	baseURL: BASE_URL,
+	timeout: 0
+})
 
-// Interceptor de respuestas
 api.interceptors.response.use(
-	response => {
-		return response
-	},
+	response => response,
 	error => {
-		// Manejo unificado de errores
 		if (error.response) {
-			// El servidor devolvió un código de estado de error
 			console.error('API Error:', error.response.data)
 		} else if (error.request) {
-			// La petición se envió pero no se recibió respuesta
 			console.error('Network Error:', error.request)
 		} else {
-			// Otros errores
 			console.error('Error:', error.message)
 		}
 		return Promise.reject(error)
 	}
 )
 
-// Formato unificado de respuesta de la API
+statusApi.interceptors.response.use(
+	response => response,
+	error => Promise.reject(error)
+)
+
 export interface ApiResponse<T> {
 	success: boolean
 	data: T
@@ -49,7 +40,6 @@ export interface ApiResponse<T> {
 	error?: string | null
 }
 
-// Estructura de data devuelta por el endpoint de subida
 export interface UploadTaskData {
 	task_id: string | number
 	document_id: string
@@ -69,7 +59,6 @@ export interface UploadTaskParams {
 
 export type TaskStatus = 'pending' | 'processing' | 'completed' | 'failed'
 
-// Estructura de data devuelta por el endpoint de polling
 export interface TaskStatusData {
 	task_id: string | number
 	document_id: string
@@ -119,11 +108,6 @@ export interface TaskStatusData {
 
 export interface TaskStatusResponse extends ApiResponse<TaskStatusData> {}
 
-/**
- * Sube un archivo y crea una tarea OCR
- * @param params Parámetros de subida
- * @returns Promise<UploadTaskData>
- */
 export async function uploadTask(params: UploadTaskParams): Promise<UploadTaskData> {
 	const formData = new FormData()
 	formData.append('file', params.file)
@@ -141,13 +125,8 @@ export async function uploadTask(params: UploadTaskParams): Promise<UploadTaskDa
 	return response.data.data
 }
 
-/**
- * Consulta el estado de una tarea
- * @param taskId ID de la tarea
- * @returns Promise<TaskStatusData>
- */
 export async function getTaskStatus(taskId: string | number): Promise<TaskStatusData> {
-	const response = await api.get<TaskStatusResponse>(`/tasks/${taskId}`)
+	const response = await statusApi.get<TaskStatusResponse>(`/tasks/${taskId}`)
 
 	if (!response.data.success) {
 		throw new Error(response.data.message || 'Error al consultar el estado de la tarea')

@@ -187,6 +187,7 @@ class TaskManager:
                 "created_at": task.created_at,
                 "started_at": task.started_at,
                 "completed_at": task.completed_at,
+                "execution_time": task.execution_time,
                 "error_message": task.error_message,
                 "result_file_path": task.result_file_path,
                 "processing_mode": task.processing_mode,

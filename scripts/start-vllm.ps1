@@ -1,5 +1,5 @@
 # Inicia el servidor vLLM para GLM-OCR en Windows (RTX / CUDA).
-# Requiere vllm-windows en .venv y VS Build Tools (cl.exe) para FlashInfer en RTX 50.
+# Require vllm-windows en .venv y VS Build Tools (cl.exe) para FlashInfer en RTX 50.
 #
 # Uso:
 #   .\scripts\start-vllm.ps1

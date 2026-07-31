@@ -1,13 +1,27 @@
 import { CircleCheck, Info, LoaderCircle, TriangleAlert, XCircleIcon } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Toaster as Sonner } from 'sonner'
-
+import { getResolvedTheme, THEME_EVENT, type Theme } from '@/libs/theme'
 
 type ToasterProps = React.ComponentProps<typeof Sonner>
 
 const Toaster = ({ ...props }: ToasterProps) => {
+	const [theme, setTheme] = useState<Theme>(() =>
+		typeof document !== 'undefined' ? getResolvedTheme() : 'light'
+	)
+
+	useEffect(() => {
+		const onTheme = (event: Event) => {
+			const detail = (event as CustomEvent<Theme>).detail
+			if (detail === 'light' || detail === 'dark') setTheme(detail)
+		}
+		window.addEventListener(THEME_EVENT, onTheme)
+		return () => window.removeEventListener(THEME_EVENT, onTheme)
+	}, [])
+
 	return (
 		<Sonner
-			// theme='dark'
+			theme={theme}
 			className='toaster group'
 			icons={{
 				success: <CircleCheck className='h-4 w-4' />,
@@ -17,7 +31,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
 				loading: <LoaderCircle className='h-4 w-4 animate-spin' />
 			}}
 			toastOptions={{
-        duration: 3500,
+				duration: 3500,
 				classNames: {
 					toast: '!static !shadow-lg !rounded-[12px] !px-4 !py-[10px] !gap-1 !w-auto',
 					title: '!text-sm leading-[22px] text-white font-normal',
@@ -29,13 +43,11 @@ const Toaster = ({ ...props }: ToasterProps) => {
 				}
 			}}
 			style={{
-				// position: 'fixed',
 				top: 40,
-        left: '50%',
-        transform: 'translateX(-50%)',
+				left: '50%',
+				transform: 'translateX(-50%)',
 				display: 'flex',
 				flexDirection: 'column',
-
 				alignItems: 'center',
 				width: '100%',
 				pointerEvents: 'none'

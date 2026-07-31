@@ -1,0 +1,23 @@
+# Falsos positivos en español frente al diccionario EN de typos.
+# Clave = valor → ortografía válida (no corregir).
+
+[default.extend-words]
+# Ambiguos (múltiples correcciones EN)
+cliente = "cliente"
+responde = "responde"
+inicial = "inicial"
+
+# Autocorrecciones incorrectas en texto ES
+informe = "informe"
+oficial = "oficial"
+conector = "conector"
+principales = "principales"
+varios = "varios"
+hace = "hace"
+historial = "historial"
+componente = "componente"
+componentes = "componentes"
+extensiones = "extensiones"
+argumentos = "argumentos"
+comandos = "comandos"
+ser = "ser"

@@ -5,6 +5,43 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/** Formatea segundos a una cadena legible en español (p. ej. "2 min 15 s"). */
+export function formatDuration(seconds: number): string {
+  const total = Math.max(0, Math.round(seconds))
+  const hours = Math.floor(total / 3600)
+  const minutes = Math.floor((total % 3600) / 60)
+  const secs = total % 60
+
+  if (hours > 0) {
+    return minutes > 0 ? `${hours} h ${minutes} min ${secs} s` : `${hours} h ${secs} s`
+  }
+  if (minutes > 0) {
+    return secs > 0 ? `${minutes} min ${secs} s` : `${minutes} min`
+  }
+  return `${secs} s`
+}
+
+/** Duración OCR en segundos a partir de execution_time o timestamps. */
+export function getOcrDurationSeconds(data: {
+  execution_time?: number | null
+  started_at?: string | null
+  completed_at?: string | null
+  created_at?: string | null
+}): number | null {
+  if (typeof data.execution_time === 'number' && Number.isFinite(data.execution_time) && data.execution_time >= 0) {
+    return data.execution_time
+  }
+
+  const startRaw = data.started_at || data.created_at
+  const endRaw = data.completed_at
+  if (!startRaw || !endRaw) return null
+
+  const start = Date.parse(startRaw)
+  const end = Date.parse(endRaw)
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return null
+  return (end - start) / 1000
+}
+
 
 // Función de copia (JS/TS puro; usable en cualquier proyecto React/Next.js)
 export function copyToClipboard(text: string): Promise<boolean> {

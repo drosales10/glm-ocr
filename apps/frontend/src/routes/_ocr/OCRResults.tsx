@@ -1,9 +1,9 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import type { TaskResponse } from './FileUpload'
 import { MarkdownPreview } from '@/components/ocr/MarkdownPreview'
 import { useOcrStore } from '../../store/useOcrStore'
-import { AppWindowIcon, CopyIcon, DownloadIcon, FileJsonIcon } from 'lucide-react'
+import { AppWindowIcon, ClockIcon, CopyIcon, DownloadIcon, FileJsonIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { JsonPreview } from '@/components/ocr/JsonPreview'
@@ -12,6 +12,7 @@ import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import rehypeRaw from 'rehype-raw'
 import 'katex/dist/katex.min.css'
+import { formatDuration, getOcrDurationSeconds } from '@/libs/utils'
 
 interface OCRResultsProps {
 	result: TaskResponse | null
@@ -39,6 +40,7 @@ function parseBBox(raw: unknown): [number, number, number, number] | null {
 
 export function OCRResults({ result, fileName }: OCRResultsProps) {
 	const setBlocks = useOcrStore(s => s.setBlocks)
+	const [nowMs, setNowMs] = useState(() => Date.now())
 
 	const layout = useMemo(() => result?.response?.layout || [], [result?.response?.layout])
 	const pageHeight = result?.response?.metadata?.height ?? 2339
@@ -71,6 +73,36 @@ export function OCRResults({ result, fileName }: OCRResultsProps) {
 		setBlocks(blocks)
 	}, [blocks, setBlocks])
 
+	const response = result?.response
+	const status = result?.status
+	const error_message = result?.error_message
+	const markdown = response?.full_markdown?.trim() || ''
+	const isDone = status === 'completed'
+	const isBusy = status === 'pending' || status === 'processing'
+
+	useEffect(() => {
+		if (!isBusy) return
+		const id = window.setInterval(() => setNowMs(Date.now()), 1000)
+		return () => window.clearInterval(id)
+	}, [isBusy])
+
+	const durationSeconds = useMemo(() => {
+		if (!response) return null
+		if (isDone || status === 'failed') {
+			return getOcrDurationSeconds(response)
+		}
+		if (isBusy) {
+			const startRaw = response.started_at || response.created_at
+			if (!startRaw) return null
+			const start = Date.parse(startRaw)
+			if (!Number.isFinite(start)) return null
+			return Math.max(0, (nowMs - start) / 1000)
+		}
+		return null
+	}, [response, isDone, isBusy, status, nowMs])
+
+	const durationLabel = durationSeconds != null ? formatDuration(durationSeconds) : null
+
 	const handleCopy = () => {
 		if (!result?.response?.full_markdown) return
 		navigator.clipboard.writeText(result.response.full_markdown)
@@ -89,17 +121,10 @@ export function OCRResults({ result, fileName }: OCRResultsProps) {
 		toast.success('Descarga completada')
 	}
 
-	const response = result?.response
-	const status = result?.status
-	const error_message = result?.error_message
-	const markdown = response?.full_markdown?.trim() || ''
-	const isDone = status === 'completed'
-	const isBusy = status === 'pending' || status === 'processing'
-
 	return (
 		<div className='h-screen flex flex-col bg-white dark:bg-gray-950 border-l border-border'>
 			<Tabs defaultValue='markdown' className='flex-1 flex flex-col overflow-hidden'>
-				<div className='px-4 pt-4 pb-0 bg-white dark:bg-gray-950 sticky top-0 z-10 flex items-center justify-between'>
+				<div className='px-4 pt-4 pb-0 bg-white dark:bg-gray-950 sticky top-0 z-10 flex items-center justify-between gap-3'>
 					<TabsList className='grid grid-cols-2'>
 						<TabsTrigger value='markdown' className='cursor-pointer'>
 							<AppWindowIcon className='size-4' />
@@ -110,16 +135,40 @@ export function OCRResults({ result, fileName }: OCRResultsProps) {
 							JSON
 						</TabsTrigger>
 					</TabsList>
-					{isDone && markdown && (
-						<div className='flex items-center gap-2'>
-							<Button variant='outline' size='icon' className='cursor-pointer' onClick={handleCopy}>
-								<CopyIcon className='size-4' />
-							</Button>
-							<Button variant='outline' size='icon' className='cursor-pointer' onClick={handleDownload}>
-								<DownloadIcon className='size-4' />
-							</Button>
-						</div>
-					)}
+					<div className='flex items-center gap-2 min-w-0'>
+						{durationLabel && (
+							<span
+								className='inline-flex items-center gap-1.5 rounded-md border border-border bg-gray-50 dark:bg-gray-900 px-2 py-1 text-xs text-gray-600 dark:text-gray-300 tabular-nums'
+								title={
+									isBusy
+										? 'Tiempo transcurrido desde el inicio del OCR'
+										: 'Tiempo total que tardó el OCR en completarse'
+								}>
+								<ClockIcon className='size-3.5 shrink-0 text-gray-500 dark:text-gray-400' />
+								{isBusy ? (
+									<>
+										<span className='text-gray-500 dark:text-gray-400'>Transcurrido</span>
+										<span className='font-medium text-foreground'>{durationLabel}</span>
+									</>
+								) : (
+									<>
+										<span className='text-gray-500 dark:text-gray-400'>Generado en</span>
+										<span className='font-medium text-foreground'>{durationLabel}</span>
+									</>
+								)}
+							</span>
+						)}
+						{isDone && markdown && (
+							<>
+								<Button variant='outline' size='icon' className='cursor-pointer' onClick={handleCopy}>
+									<CopyIcon className='size-4' />
+								</Button>
+								<Button variant='outline' size='icon' className='cursor-pointer' onClick={handleDownload}>
+									<DownloadIcon className='size-4' />
+								</Button>
+							</>
+						)}
+					</div>
 				</div>
 
 				<div className='flex-1 overflow-hidden'>
@@ -133,8 +182,13 @@ export function OCRResults({ result, fileName }: OCRResultsProps) {
 											? 'Finalizando…'
 											: `Procesando...${typeof response?.progress === 'number' ? ` ${Math.round(response.progress)}%` : ''}`}
 									</p>
+									{durationLabel && (
+										<p className='text-sm text-gray-600 dark:text-gray-300 mt-2 tabular-nums'>
+											Tiempo: {durationLabel}
+										</p>
+									)}
 									{(response?.current_step || response?.current_stage) && (
-										<p className='text-xs text-gray-400 mt-2'>
+										<p className='text-xs text-gray-400 dark:text-gray-500 mt-2'>
 											{response.current_step || response.current_stage}
 										</p>
 									)}
@@ -166,6 +220,11 @@ export function OCRResults({ result, fileName }: OCRResultsProps) {
 									<p>Error al procesar</p>
 									{error_message && (
 										<p className='text-sm mt-2 text-gray-500 dark:text-gray-400'>{error_message}</p>
+									)}
+									{durationLabel && (
+										<p className='text-xs mt-2 text-gray-500 dark:text-gray-400 tabular-nums'>
+											Duró {durationLabel} antes de fallar
+										</p>
 									)}
 								</div>
 							</div>

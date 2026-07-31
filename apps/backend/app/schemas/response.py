@@ -36,6 +36,9 @@ class TaskData(BaseModel):
     created_at: str
     started_at: Optional[str] = None
     completed_at: Optional[str] = None
+    execution_time: Optional[float] = Field(
+        None, description="Segundos entre started_at y completed_at"
+    )
     progress: Optional[float] = None
     current_step: Optional[str] = None
     error_message: Optional[str] = None

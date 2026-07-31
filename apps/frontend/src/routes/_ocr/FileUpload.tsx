@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent } from 'react'
 import { CheckCircle2, FileText, FolderOpen, Loader2, Upload, XCircle } from 'lucide-react'
-import { cn } from '@/libs/utils'
+import { cn, formatDuration, getOcrDurationSeconds } from '@/libs/utils'
 import { getTaskStatus, uploadTask, type TaskStatusData, type TaskStatus } from '@/libs/api'
 import { toast } from 'sonner'
+import { ThemeToggle } from '@/components/ThemeToggle'
 
 export type Layout = {
 	block_content: string
@@ -36,6 +37,7 @@ interface QueueItem {
 	error?: string | null
 	progress?: number
 	currentStep?: string | null
+	executionSeconds?: number | null
 }
 
 interface FileUploadProps {
@@ -101,7 +103,8 @@ export function FileUpload({ onFileUploaded, onTaskStatusChange }: FileUploadPro
 		status: QueueStatus,
 		error?: string | null,
 		progress?: number,
-		currentStep?: string | null
+		currentStep?: string | null,
+		executionSeconds?: number | null
 	) => {
 		if (!mountedRef.current) return
 		setQueue(items =>
@@ -112,7 +115,9 @@ export function FileUpload({ onFileUploaded, onTaskStatusChange }: FileUploadPro
 							status,
 							error: error ?? item.error,
 							progress: progress ?? item.progress,
-							currentStep: currentStep ?? item.currentStep
+							currentStep: currentStep ?? item.currentStep,
+							executionSeconds:
+								executionSeconds !== undefined ? executionSeconds : item.executionSeconds
 						}
 					: item
 			)
@@ -137,7 +142,11 @@ export function FileUpload({ onFileUploaded, onTaskStatusChange }: FileUploadPro
 				}
 
 				const step = response.current_step ?? response.current_stage ?? null
-				updateQueueItem(fileId, response.status, null, response.progress, step)
+				const duration =
+					response.status === 'completed' || response.status === 'failed'
+						? getOcrDurationSeconds(response)
+						: null
+				updateQueueItem(fileId, response.status, null, response.progress, step, duration)
 				onTaskStatusChange?.({
 					fileId,
 					status: response.status,
@@ -147,7 +156,7 @@ export function FileUpload({ onFileUploaded, onTaskStatusChange }: FileUploadPro
 
 				if (response.status === 'completed' || response.status === 'failed') {
 					if (response.status === 'failed') {
-						updateQueueItem(fileId, 'failed', response.error_message)
+						updateQueueItem(fileId, 'failed', response.error_message, undefined, undefined, duration)
 					}
 					return
 				}
@@ -271,7 +280,10 @@ export function FileUpload({ onFileUploaded, onTaskStatusChange }: FileUploadPro
 	return (
 		<div className='h-full flex flex-col bg-white dark:bg-gray-900 border-r border-border'>
 			<div className='p-4'>
-				<h2 className='text-lg font-semibold mb-4'>Procesamiento OCR</h2>
+				<div className='mb-4 flex items-center justify-between gap-2'>
+					<h2 className='text-lg font-semibold'>Procesamiento OCR</h2>
+					<ThemeToggle />
+				</div>
 				<div
 					className={cn(
 						'border-2 border-dashed rounded-lg py-6 px-4 text-center cursor-pointer transition-colors',
@@ -318,12 +330,14 @@ export function FileUpload({ onFileUploaded, onTaskStatusChange }: FileUploadPro
 						{queue.map(item => (
 							<div key={item.file.id} className='rounded-md border px-2 py-2 text-xs'>
 								<div className='flex items-center gap-2 min-w-0'>
-									{item.status === 'completed' ? <CheckCircle2 className='size-4 text-green-600 shrink-0' /> : item.status === 'failed' ? <XCircle className='size-4 text-red-600 shrink-0' /> : <Loader2 className='size-4 text-primary shrink-0 animate-spin' />}
+									{item.status === 'completed' ? <CheckCircle2 className='size-4 text-green-600 dark:text-green-400 shrink-0' /> : item.status === 'failed' ? <XCircle className='size-4 text-red-600 dark:text-red-400 shrink-0' /> : <Loader2 className='size-4 text-primary shrink-0 animate-spin' />}
 									<span className='truncate flex-1' title={item.file.name}>{item.file.name}</span>
-									<span className='text-gray-500 shrink-0'>
-										{item.status === 'processing' && typeof item.progress === 'number'
-											? `${Math.round(item.progress)}%`
-											: statusLabel[item.status]}
+									<span className='text-gray-500 dark:text-gray-400 shrink-0'>
+										{item.status === 'completed' && item.executionSeconds != null
+											? formatDuration(item.executionSeconds)
+											: item.status === 'processing' && typeof item.progress === 'number'
+												? `${Math.round(item.progress)}%`
+												: statusLabel[item.status]}
 									</span>
 								</div>
 								{(item.status === 'processing' || item.status === 'pending') && (

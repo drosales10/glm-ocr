@@ -20,14 +20,16 @@ script_dir = Path(__file__).resolve().parent.parent
 if str(script_dir) not in sys.path:
     sys.path.insert(0, str(script_dir))
 
-from glmocr import GlmOcr
-from glmocr.utils.logging import get_logger
+from glmocr import GlmOcr  # noqa: E402
+from glmocr.utils.logging import get_logger  # noqa: E402
 
 # Configurar logger
 logger = get_logger("batch_ocr_processor")
 
 
-def get_image_files(directory: str, extensions: Optional[List[str]] = None) -> List[Path]:
+def get_image_files(
+    directory: str, extensions: Optional[List[str]] = None
+) -> List[Path]:
     """
     Obtener todos los archivos de imagen de un directorio.
 
@@ -70,28 +72,25 @@ Ejemplos de uso:
     python scripts/batch_process_images.py --input "path/to/images" --output "path/to/results"
     python scripts/batch_process_images.py --input "path/to/images" --config "path/to/config.yaml"
     python scripts/batch_process_images.py --input "path/to/images" --start-index 10 --end-index 50
-        """
+        """,
     )
 
     parser.add_argument(
         "--input",
         "-i",
         required=True,
-        help="Directorio de entrada con las imágenes a procesar"
+        help="Directorio de entrada con las imágenes a procesar",
     )
 
     parser.add_argument(
         "--output",
         "-o",
         default=None,
-        help="Directorio de salida para los resultados (por defecto: input/results)"
+        help="Directorio de salida para los resultados (por defecto: input/results)",
     )
 
     parser.add_argument(
-        "--config",
-        "-c",
-        default=None,
-        help="Ruta al archivo de configuración YAML"
+        "--config", "-c", default=None, help="Ruta al archivo de configuración YAML"
     )
 
     parser.add_argument(
@@ -99,7 +98,7 @@ Ejemplos de uso:
         "-s",
         type=int,
         default=0,
-        help="Índice inicial para procesamiento (por defecto: 0)"
+        help="Índice inicial para procesamiento (por defecto: 0)",
     )
 
     parser.add_argument(
@@ -107,7 +106,7 @@ Ejemplos de uso:
         "-e",
         type=int,
         default=None,
-        help="Índice final para procesamiento (por defecto: todos)"
+        help="Índice final para procesamiento (por defecto: todos)",
     )
 
     parser.add_argument(
@@ -115,7 +114,7 @@ Ejemplos de uso:
         "-r",
         type=int,
         default=3,
-        help="Número de reintentos por error (por defecto: 3)"
+        help="Número de reintentos por error (por defecto: 3)",
     )
 
     parser.add_argument(
@@ -123,7 +122,7 @@ Ejemplos de uso:
         "-d",
         type=int,
         default=5,
-        help="Tiempo de espera entre reintentos en segundos (por defecto: 5)"
+        help="Tiempo de espera entre reintentos en segundos (por defecto: 5)",
     )
 
     parser.add_argument(
@@ -131,28 +130,23 @@ Ejemplos de uso:
         "-p",
         type=int,
         default=1,
-        help="Número de imágenes a procesar en paralelo (por defecto: 1)"
+        help="Número de imágenes a procesar en paralelo (por defecto: 1)",
     )
 
     parser.add_argument(
         "--skip-existing",
         "-k",
         action="store_true",
-        help="Saltar archivos que ya tienen resultados"
+        help="Saltar archivos que ya tienen resultados",
     )
 
-    parser.add_argument(
-        "--verbose",
-        "-v",
-        action="store_true",
-        help="Modo verboso"
-    )
+    parser.add_argument("--verbose", "-v", action="store_true", help="Modo verboso")
 
     parser.add_argument(
         "--json-only",
         "-j",
         action="store_true",
-        help="No guardar las visualizaciones de layout (el Markdown se sigue guardando)"
+        help="No guardar las visualizaciones de layout (el Markdown se sigue guardando)",
     )
 
     parser.add_argument(
@@ -160,7 +154,7 @@ Ejemplos de uso:
         "-l",
         choices=["cpu", "cuda", "mps"],
         default=None,
-        help="Dispositivo para layout detection (por defecto: auto)"
+        help="Dispositivo para layout detection (por defecto: auto)",
     )
 
     return parser.parse_args()
@@ -172,7 +166,7 @@ async def process_single_image(
     output_dir: Path,
     retry_count: int = 3,
     retry_delay: int = 5,
-    json_only: bool = False
+    json_only: bool = False,
 ) -> dict:
     """
     Procesar una sola imagen con reintentos.
@@ -193,13 +187,15 @@ async def process_single_image(
         "success": False,
         "output_files": {},
         "error": None,
-        "attempts": 0
+        "attempts": 0,
     }
 
     for attempt in range(1, retry_count + 1):
         result["attempts"] = attempt
         try:
-            logger.info(f"Procesando: {image_path.name} (intent {attempt}/{retry_count})")
+            logger.info(
+                f"Procesando: {image_path.name} (intent {attempt}/{retry_count})"
+            )
 
             # Procesar imagen
             parsed_result = processor.parse(str(image_path))
@@ -259,7 +255,7 @@ async def process_batch(
     skip_existing: bool = False,
     verbose: bool = False,
     json_only: bool = False,
-    layout_device: Optional[str] = None
+    layout_device: Optional[str] = None,
 ) -> dict:
     """
     Procesar lote de imágenes.
@@ -299,7 +295,9 @@ async def process_batch(
     # Filtrar por rango
     image_files = image_files[start_index:end_index]
     images_to_process = len(image_files)
-    logger.info(f"Procesando imágenes {start_index} a {end_index}: {images_to_process} imágenes")
+    logger.info(
+        f"Procesando imágenes {start_index} a {end_index}: {images_to_process} imágenes"
+    )
 
     # Crear directorio de salida
     output_path = Path(output_dir)
@@ -339,7 +337,7 @@ async def process_batch(
             output_dir=output_path,
             retry_count=retry_count,
             retry_delay=retry_delay,
-            json_only=json_only
+            json_only=json_only,
         )
         results.append(result)
 
@@ -368,7 +366,7 @@ async def process_batch(
         "successes": successes,
         "failures": failures,
         "skipped": skipped,
-        "results": results
+        "results": results,
     }
 
     # Guardar resumen
@@ -377,7 +375,7 @@ async def process_batch(
         json.dump(summary, f, indent=2, ensure_ascii=False)
 
     logger.info(f"\n{'='*60}")
-    logger.info(f"Procesamiento completado:")
+    logger.info("Procesamiento completado:")
     logger.info(f"  Total imágenes: {total_images}")
     logger.info(f"  Procesadas: {successes + failures}")
     logger.info(f"  Éxitos: {successes}")
@@ -400,20 +398,22 @@ def main():
         output_dir = args.output
 
     # Ejecutar procesamiento
-    summary = asyncio.run(process_batch(
-        input_dir=args.input,
-        output_dir=str(output_dir),
-        config_path=args.config,
-        start_index=args.start_index,
-        end_index=args.end_index,
-        retry_count=args.retry_count,
-        retry_delay=args.retry_delay,
-        parallel=args.parallel,
-        skip_existing=args.skip_existing,
-        verbose=args.verbose,
-        json_only=args.json_only,
-        layout_device=args.layout_device
-    ))
+    summary = asyncio.run(
+        process_batch(
+            input_dir=args.input,
+            output_dir=str(output_dir),
+            config_path=args.config,
+            start_index=args.start_index,
+            end_index=args.end_index,
+            retry_count=args.retry_count,
+            retry_delay=args.retry_delay,
+            parallel=args.parallel,
+            skip_existing=args.skip_existing,
+            verbose=args.verbose,
+            json_only=args.json_only,
+            layout_device=args.layout_device,
+        )
+    )
 
     # Salir con código adecuado
     if summary["success"]:

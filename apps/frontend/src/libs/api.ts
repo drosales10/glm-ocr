@@ -69,6 +69,8 @@ export interface TaskStatusData {
 	created_at: string
 	started_at?: string
 	completed_at?: string
+	/** Segundos entre inicio y fin del OCR (si la tarea ya terminó). */
+	execution_time?: number | null
 	error_message?: string | null
 	result_file_path?: string
 	result?: {

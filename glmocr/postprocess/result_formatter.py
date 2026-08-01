@@ -328,6 +328,27 @@ class ResultFormatter(BasePostProcessor):
                 or content.endswith("\\)")
             ):
                 content = content[:-2].strip()
+            # Drop empty / placeholder formula blocks (e.g. lone "$")
+            stripped = content.strip().strip("$").strip()
+            if not stripped or stripped in {"$", "$$"}:
+                return ""
+            # Drop OCR garbage from tiny false-positive formula boxes
+            # (often just a confidence-like number: "0.85" / "0. 9 3")
+            compact = re.sub(r"\s+", "", stripped)
+            if re.fullmatch(r"\d+(?:\.\d+)?", compact):
+                return ""
+            if re.search(
+                r"display\s*formula|inline\s*formula", stripped, re.IGNORECASE
+            ):
+                # Model sometimes echoes layout labels into the formula crop
+                stripped = re.sub(
+                    r"(?i)(?:display|inline)\s*formula\s*\d*(?:\.\d+)?",
+                    "",
+                    stripped,
+                ).strip()
+                if not stripped:
+                    return ""
+                content = stripped
             content = "$$\n" + content + "\n$$"
 
         # Text formatting

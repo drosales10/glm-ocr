@@ -161,7 +161,15 @@ class PageLoaderConfig(_BaseConfig):
     min_pixels: int = 112 * 112
     max_pixels: int = 14 * 14 * 4 * 1280
 
-    task_prompt_mapping: Optional[Dict[str, str]] = None
+    # Default prompts are required for Ollama: an empty prompt falls back to
+    # "Text Recognition:", which badly degrades display/inline formulas.
+    task_prompt_mapping: Optional[Dict[str, str]] = Field(
+        default_factory=lambda: {
+            "text": "Text Recognition:",
+            "table": "Table Recognition:",
+            "formula": "Formula Recognition:",
+        }
+    )
 
     pdf_dpi: int = 200
     pdf_max_pages: Optional[int] = None
@@ -179,7 +187,7 @@ class ResultFormatterConfig(_BaseConfig):
         default_factory=lambda: {
             "image": ["chart", "image"],
             "table": ["table"],
-            "formula": ["display_formula", "inline_formula"],
+            "formula": ["display_formula", "inline_formula", "formula"],
             "text": [
                 "abstract",
                 "algorithm",

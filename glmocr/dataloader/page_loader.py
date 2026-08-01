@@ -349,9 +349,16 @@ class PageLoader:
         Returns:
             Full API request payload.
         """
+        default_prompts = {
+            "text": "Text Recognition:",
+            "table": "Table Recognition:",
+            "formula": "Formula Recognition:",
+        }
         prompt_text = ""
         if self.task_prompt_mapping:
             prompt_text = self.task_prompt_mapping.get(task_type, "")
+        if not prompt_text:
+            prompt_text = default_prompts.get(task_type, "Text Recognition:")
 
         encoded_image = load_image_to_base64(
             image,

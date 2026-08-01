@@ -384,6 +384,10 @@ class PPDocLayoutDetector(BaseLayoutDetector):
                     if isinstance(labels, list) and label in labels:
                         task_type = task_item
                         break
+                # PP-DocLayoutV3 (safetensors) uses label "formula"; older
+                # exports used display_formula / inline_formula.
+                if task_type is None and "formula" in str(label).lower():
+                    task_type = "formula"
                 if task_type is None or task_type == "abandon":
                     continue
                 x1, y1, x2, y2 = box

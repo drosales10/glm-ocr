@@ -1,5 +1,6 @@
 # GLM-OCR — Ollama (GPU vía Ollama, sin vLLM)
 # Uso: ollama serve  +  python -m glmocr.server --config config.ollama.yaml
+# Optimizado para papers con fórmulas/integrales.
 
 server:
   host: "0.0.0.0"
@@ -16,15 +17,44 @@ pipeline:
     api_path: /api/generate
     model: glm-ocr:latest
     api_mode: ollama_generate
-    request_timeout: 600
+    request_timeout: 1800
 
   max_workers: 2
+
+  page_loader:
+    max_tokens: 8192
+    temperature: 0.0
+    top_p: 0.00001
+    top_k: 1
+    repetition_penalty: 1.1
+    image_format: PNG
+    pdf_dpi: 300
+    task_prompt_mapping:
+      text: "Text Recognition:"
+      table: "Table Recognition:"
+      formula: "Formula Recognition:"
+
+  result_formatter:
+    output_format: both
+    enable_merge_formula_numbers: true
+    enable_merge_text_blocks: true
+    enable_format_bullet_points: true
 
   layout:
     model_dir: PaddlePaddle/PP-DocLayoutV3_safetensors
     # Si sobra VRAM tras cargar Ollama, cambia a: cuda
     device: cpu
     batch_size: 1
+    threshold: 0.3
+    threshold_by_class:
+      formula: 0.35
+      formula_number: 0.25
+    layout_unclip_ratio:
+      - 1.12
+      - 1.25
+    layout_nms: true
+    use_polygon: false
+    layout_merge_bboxes_mode: large
     label_task_mapping:
       text:
         - abstract
@@ -42,6 +72,7 @@ pipeline:
       table:
         - table
       formula:
+        - formula
         - display_formula
         - inline_formula
       skip:

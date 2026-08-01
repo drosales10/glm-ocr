@@ -266,7 +266,17 @@ def apply_layout_postprocess(
         # Apply merge_bboxes_mode
         if layout_merge_bboxes_mode:
             # Get indices for labels that should always be preserved
-            preserve_labels = ["image", "seal", "chart"]
+            # Keep formula boxes even when nested inside large text paragraphs;
+            # otherwise display equations / integrals are dropped on math papers.
+            preserve_labels = [
+                "image",
+                "seal",
+                "chart",
+                "formula",
+                "display_formula",
+                "inline_formula",
+                "formula_number",
+            ]
             preserve_indices = set()
             for label in preserve_labels:
                 if label in all_labels:

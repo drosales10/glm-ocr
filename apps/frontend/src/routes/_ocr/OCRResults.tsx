@@ -3,7 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import type { TaskResponse } from './FileUpload'
 import { MarkdownPreview } from '@/components/ocr/MarkdownPreview'
 import { useOcrStore } from '../../store/useOcrStore'
-import { AppWindowIcon, ClockIcon, CopyIcon, DownloadIcon, FileJsonIcon } from 'lucide-react'
+import { AppWindowIcon, ClockIcon, CopyIcon, DownloadIcon, FileJsonIcon, LanguagesIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { JsonPreview } from '@/components/ocr/JsonPreview'
@@ -13,7 +13,44 @@ import rehypeKatex from 'rehype-katex'
 import rehypeRaw from 'rehype-raw'
 import 'katex/dist/katex.min.css'
 import { formatDuration, getOcrDurationSeconds, parseUtcMs } from '@/libs/utils'
-import { formatStep } from '@/libs/api'
+import { formatStep, getTranslateLanguages, translateText, type TranslateLanguage } from '@/libs/api'
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue
+} from '@/components/ui/select'
+
+const FALLBACK_LANGUAGES: TranslateLanguage[] = [
+	{ code: 'es', name: 'Español' },
+	{ code: 'en', name: 'Inglés' },
+	{ code: 'fr', name: 'Francés' },
+	{ code: 'de', name: 'Alemán' },
+	{ code: 'it', name: 'Italiano' },
+	{ code: 'pt', name: 'Portugués' },
+	{ code: 'ru', name: 'Ruso' },
+	{ code: 'zh', name: 'Chino' },
+	{ code: 'ja', name: 'Japonés' },
+	{ code: 'ko', name: 'Coreano' },
+	{ code: 'ar', name: 'Árabe' },
+	{ code: 'hi', name: 'Hindi' },
+	{ code: 'nl', name: 'Neerlandés' },
+	{ code: 'pl', name: 'Polaco' },
+	{ code: 'tr', name: 'Turco' },
+	{ code: 'vi', name: 'Vietnamita' },
+	{ code: 'id', name: 'Indonesio' },
+	{ code: 'uk', name: 'Ucraniano' },
+	{ code: 'sv', name: 'Sueco' },
+	{ code: 'th', name: 'Tailandés' }
+]
+
+interface TranslationEntry {
+	text: string
+	source: string
+	target: string
+	error: string | null
+}
 
 interface OCRResultsProps {
 	result: TaskResponse | null
@@ -102,32 +139,119 @@ export function OCRResults({ result, fileName }: OCRResultsProps) {
 
 	const durationLabel = durationSeconds != null ? formatDuration(durationSeconds) : null
 
+	const taskKey = String(response?.task_id || result?.fileId || '')
+	const [languages, setLanguages] = useState<TranslateLanguage[]>(FALLBACK_LANGUAGES)
+	const [sourceLang, setSourceLang] = useState('en')
+	const [targetLang, setTargetLang] = useState('es')
+	const [tab, setTab] = useState('markdown')
+	const [translations, setTranslations] = useState<Record<string, TranslationEntry>>({})
+	const [translatingKey, setTranslatingKey] = useState<string | null>(null)
+
+	const translation = taskKey ? translations[taskKey] : undefined
+	const isTranslating = translatingKey === taskKey && translatingKey !== ''
+
+	useEffect(() => {
+		let cancelled = false
+		getTranslateLanguages()
+			.then(items => {
+				if (!cancelled && items.length > 0) setLanguages(items)
+			})
+			.catch(() => {
+				/* La lista local cubre el mismo conjunto si el backend no responde. */
+			})
+		return () => {
+			cancelled = true
+		}
+	}, [])
+
+	const activeText = tab === 'translation' ? translation?.text || '' : markdown
+
 	const handleCopy = () => {
-		if (!result?.response?.full_markdown) return
-		navigator.clipboard.writeText(result.response.full_markdown)
+		if (tab === 'translation' && !translation?.text) {
+			toast.error('Todavía no hay traducción')
+			return
+		}
+		if (!activeText) return
+		navigator.clipboard.writeText(activeText)
 		toast.success('Copiado correctamente')
 	}
 
 	const handleDownload = () => {
-		if (!result?.response?.full_markdown) return
-		const blob = new Blob([result.response.full_markdown], { type: 'text/markdown' })
+		if (tab === 'translation' && !translation?.text) {
+			toast.error('Todavía no hay traducción')
+			return
+		}
+		if (!activeText) return
+		const blob = new Blob([activeText], { type: 'text/markdown' })
 		const url = URL.createObjectURL(blob)
 		const a = document.createElement('a')
+		const base = fileName || 'result'
 		a.href = url
-		a.download = `${fileName || 'result'}.md`
+		a.download = tab === 'translation' ? `${base}.${translation?.target || targetLang}.md` : `${base}.md`
 		a.click()
 		URL.revokeObjectURL(url)
 		toast.success('Descarga completada')
 	}
 
+	const handleTranslate = async () => {
+		if (!markdown || !taskKey || isTranslating) return
+		setTranslatingKey(taskKey)
+		setTab('translation')
+		setTranslations(current => ({
+			...current,
+			[taskKey]: {
+				text: current[taskKey]?.text || '',
+				source: sourceLang,
+				target: targetLang,
+				error: null
+			}
+		}))
+		try {
+			const data = await translateText({
+				text: markdown,
+				source_lang: sourceLang,
+				target_lang: targetLang
+			})
+			setTranslations(current => ({
+				...current,
+				[taskKey]: {
+					text: data.translated,
+					source: data.source_lang,
+					target: data.target_lang,
+					error: null
+				}
+			}))
+			toast.success('Traducción lista')
+		} catch (error) {
+			const message = error instanceof Error ? error.message : 'No se pudo traducir la transcripción'
+			setTranslations(current => ({
+				...current,
+				[taskKey]: {
+					text: current[taskKey]?.text || '',
+					source: sourceLang,
+					target: targetLang,
+					error: message
+				}
+			}))
+			toast.error(message)
+		} finally {
+			setTranslatingKey(current => (current === taskKey ? null : current))
+		}
+	}
+
 	return (
 		<div className='h-screen flex flex-col bg-white dark:bg-gray-950 border-l border-border'>
-			<Tabs defaultValue='markdown' className='flex-1 flex flex-col overflow-hidden'>
-				<div className='px-4 pt-4 pb-0 bg-white dark:bg-gray-950 sticky top-0 z-10 flex items-center justify-between gap-3'>
-					<TabsList className='grid grid-cols-2'>
+			<Tabs value={tab} onValueChange={setTab} className='flex-1 flex flex-col overflow-hidden'>
+				<div className='px-4 pt-4 pb-3 bg-white dark:bg-gray-950 sticky top-0 z-10 flex flex-col gap-3'>
+					<div className='flex flex-wrap items-center justify-between gap-3'>
+					<TabsList className='grid grid-cols-3'>
 						<TabsTrigger value='markdown' className='cursor-pointer'>
 							<AppWindowIcon className='size-4' />
 							Markdown
+						</TabsTrigger>
+						<TabsTrigger value='translation' className='cursor-pointer'>
+							<LanguagesIcon className='size-4' />
+							Traducción
 						</TabsTrigger>
 						<TabsTrigger value='json' className='cursor-pointer'>
 							<FileJsonIcon className='size-4' />
@@ -168,6 +292,48 @@ export function OCRResults({ result, fileName }: OCRResultsProps) {
 							</>
 						)}
 					</div>
+					</div>
+					{isDone && markdown && (
+						<div className='flex flex-wrap items-center gap-2'>
+							<label className='text-xs text-gray-500 dark:text-gray-400' htmlFor='translate-source'>
+								Origen
+							</label>
+							<Select value={sourceLang} onValueChange={setSourceLang} disabled={isTranslating}>
+								<SelectTrigger id='translate-source' className='w-36 cursor-pointer bg-white dark:bg-gray-900'>
+									<SelectValue placeholder='Origen' />
+								</SelectTrigger>
+								<SelectContent>
+									{languages.map(language => (
+										<SelectItem key={language.code} value={language.code}>
+											{language.name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+							<label className='text-xs text-gray-500 dark:text-gray-400' htmlFor='translate-target'>
+								Destino
+							</label>
+							<Select value={targetLang} onValueChange={setTargetLang} disabled={isTranslating}>
+								<SelectTrigger id='translate-target' className='w-36 cursor-pointer bg-white dark:bg-gray-900'>
+									<SelectValue placeholder='Destino' />
+								</SelectTrigger>
+								<SelectContent>
+									{languages.map(language => (
+										<SelectItem key={`target-${language.code}`} value={language.code}>
+											{language.name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+							<Button
+								size='sm'
+								className='cursor-pointer'
+								onClick={handleTranslate}
+								disabled={isTranslating}>
+								{isTranslating ? 'Traduciendo…' : 'Traducir'}
+							</Button>
+						</div>
+					)}
 				</div>
 
 				<div className='flex-1 overflow-hidden'>
@@ -231,6 +397,48 @@ export function OCRResults({ result, fileName }: OCRResultsProps) {
 							<div className='h-full flex items-center justify-center'>
 								<div className='p-4 rounded-lg text-center text-gray-500 dark:text-gray-400'>
 									<p>Sube un archivo y espera a que termine el procesamiento</p>
+								</div>
+							</div>
+						)}
+					</TabsContent>
+
+					<TabsContent value='translation' className='h-full m-0 mt-0'>
+						{isTranslating && !translation?.text ? (
+							<div className='h-full flex items-center justify-center'>
+								<div className='text-center max-w-sm px-4'>
+									<div className='inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4'></div>
+									<p className='text-gray-500 dark:text-gray-400'>Traduciendo la transcripción…</p>
+								</div>
+							</div>
+						) : translation?.error && !translation.text ? (
+							<div className='h-full flex items-center justify-center'>
+								<div className='p-4 rounded-lg text-center text-red-500 dark:text-red-400 max-w-md'>
+									<p>No se pudo traducir</p>
+									<p className='text-sm mt-2 text-gray-500 dark:text-gray-400'>{translation.error}</p>
+								</div>
+							</div>
+						) : translation?.text ? (
+							<div className='h-full overflow-y-auto p-6 markdown-body'>
+								{isTranslating && (
+									<p className='max-w-3xl mx-auto mb-3 text-xs text-gray-500 dark:text-gray-400'>
+										Actualizando la traducción…
+									</p>
+								)}
+								{translation.error && (
+									<p className='max-w-3xl mx-auto mb-3 text-sm text-red-500 dark:text-red-400'>
+										{translation.error}
+									</p>
+								)}
+								<div className='max-w-3xl mx-auto prose dark:prose-invert'>
+									<ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeRaw, [rehypeKatex, { throwOnError: false, strict: false }]]}>
+										{translation.text}
+									</ReactMarkdown>
+								</div>
+							</div>
+						) : (
+							<div className='h-full flex items-center justify-center'>
+								<div className='p-4 rounded-lg text-center text-gray-500 dark:text-gray-400'>
+									<p>Elige el idioma de origen y de destino, y pulsa Traducir</p>
 								</div>
 							</div>
 						)}

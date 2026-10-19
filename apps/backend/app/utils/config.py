@@ -1,9 +1,18 @@
 """
 Gestión de la configuración de la aplicación
 """
+import os
 from pydantic_settings import BaseSettings
 from typing import Literal, Optional
 from pathlib import Path
+
+
+def default_translate_cache_dir() -> str:
+    """Caché de Hugging Face que ya usa VoiceStudio para NLLB-200."""
+    local_app = os.environ.get("LOCALAPPDATA")
+    if local_app:
+        return str(Path(local_app) / "OmniVoice" / "hf_cache")
+    return str(Path.home() / ".cache" / "huggingface" / "hub")
 
 
 class Settings(BaseSettings):
@@ -51,6 +60,12 @@ class Settings(BaseSettings):
     LOG_FILE: Optional[str] = None
     LOG_FORMAT: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     environment: Literal["development", "testing", "production"] = "development"
+
+    # Traducción local con NLLB-200. CPU para no competir con Ollama en la GPU.
+    TRANSLATE_CACHE_DIR: str = default_translate_cache_dir()
+    TRANSLATE_DEVICE: str = "cpu"
+    TRANSLATE_MAX_LENGTH: int = 512
+    TRANSLATE_BATCH_SIZE: int = 4
 
     class Config:
         env_file = ".env"

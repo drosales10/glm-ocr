@@ -158,6 +158,52 @@ export async function getTaskStatus(taskId: string | number): Promise<TaskStatus
 	return response.data.data
 }
 
+export interface TranslateLanguage {
+	code: string
+	name: string
+}
+
+export interface TranslateResult {
+	translated: string
+	source_lang: string
+	target_lang: string
+}
+
+const translateApi = axios.create({
+	baseURL: BASE_URL,
+	timeout: 600000
+})
+
+export async function getTranslateLanguages(): Promise<TranslateLanguage[]> {
+	const response = await api.get<ApiResponse<TranslateLanguage[]>>('/translate/languages')
+	if (!response.data.success || !response.data.data) {
+		throw new Error(response.data.message || 'No se pudieron cargar los idiomas')
+	}
+	return response.data.data
+}
+
+export async function translateText(params: {
+	text: string
+	source_lang: string
+	target_lang: string
+}): Promise<TranslateResult> {
+	try {
+		const response = await translateApi.post<ApiResponse<TranslateResult>>('/translate', params)
+		if (!response.data.success || !response.data.data) {
+			throw new Error(response.data.message || 'No se pudo traducir la transcripción')
+		}
+		return response.data.data
+	} catch (error) {
+		if (axios.isAxiosError(error)) {
+			const detail = error.response?.data?.detail
+			if (typeof detail === 'string' && detail.trim()) {
+				throw new Error(detail)
+			}
+		}
+		throw error
+	}
+}
+
 /** Cancela una tarea pendiente/en proceso en el backend (DELETE). */
 export async function cancelTask(taskId: string | number): Promise<void> {
 	const response = await api.delete<ApiResponse<{ task_id: string; status: string }>>(

@@ -61,7 +61,7 @@ export interface UploadTaskParams {
 	ocr_profile?: OcrProfile
 }
 
-export type TaskStatus = 'pending' | 'processing' | 'completed' | 'failed'
+export type TaskStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled'
 
 export interface TaskStatusData {
 	task_id: string | number
@@ -114,7 +114,10 @@ export interface TaskStatusData {
 
 export interface TaskStatusResponse extends ApiResponse<TaskStatusData> {}
 
-export async function uploadTask(params: UploadTaskParams): Promise<UploadTaskData> {
+export async function uploadTask(
+	params: UploadTaskParams,
+	options?: { signal?: AbortSignal }
+): Promise<UploadTaskData> {
 	const formData = new FormData()
 	formData.append('file', params.file)
 	formData.append('processing_mode', 'pipeline')
@@ -123,7 +126,9 @@ export async function uploadTask(params: UploadTaskParams): Promise<UploadTaskDa
 		formData.append('custom_url', params.custom_url)
 	}
 
-	const response = await api.post<UploadTaskResponse>('/tasks/upload', formData)
+	const response = await api.post<UploadTaskResponse>('/tasks/upload', formData, {
+		signal: options?.signal
+	})
 
 	if (!response.data.success) {
 		throw new Error(response.data.message || 'Error al subir el archivo')
@@ -151,6 +156,16 @@ export async function getTaskStatus(taskId: string | number): Promise<TaskStatus
 	}
 
 	return response.data.data
+}
+
+/** Cancela una tarea pendiente/en proceso en el backend (DELETE). */
+export async function cancelTask(taskId: string | number): Promise<void> {
+	const response = await api.delete<ApiResponse<{ task_id: string; status: string }>>(
+		`/tasks/${taskId}`
+	)
+	if (!response.data.success) {
+		throw new Error(response.data.message || 'No se pudo cancelar la tarea')
+	}
 }
 
 export default api

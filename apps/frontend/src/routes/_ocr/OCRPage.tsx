@@ -48,7 +48,14 @@ export function OCRPage() {
 										onClick={() => setActiveFileId(file.id)}
 										className={`max-w-44 truncate rounded px-2 py-1 text-xs ${activeFile?.id === file.id ? 'bg-primary text-primary-foreground' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
 										title={file.name}>
-										{status === 'completed' ? '✓ ' : status === 'failed' ? '× ' : ''}{file.name}
+										{status === 'completed'
+											? '✓ '
+											: status === 'failed'
+												? '× '
+												: status === 'cancelled'
+													? '■ '
+													: ''}
+										{file.name}
 									</button>
 								)
 							})}

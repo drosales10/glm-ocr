@@ -1,9 +1,34 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent } from 'react'
 import { CheckCircle2, FileText, FolderOpen, Loader2, Upload, XCircle } from 'lucide-react'
-import { cn, formatDuration, getOcrDurationSeconds } from '@/libs/utils'
-import { getTaskStatus, uploadTask, type TaskStatusData, type TaskStatus } from '@/libs/api'
+import { cn, formatDuration, getOcrDurationSeconds, parseUtcMs } from '@/libs/utils'
+import {
+	formatStep,
+	getTaskStatus,
+	uploadTask,
+	type OcrProfile,
+	type TaskStatusData,
+	type TaskStatus
+} from '@/libs/api'
 import { toast } from 'sonner'
 import { ThemeToggle } from '@/components/ThemeToggle'
+
+const OCR_PROFILE_KEY = 'glm-ocr-profile'
+
+const OCR_PROFILES: Array<{ id: OcrProfile; label: string; hint: string }> = [
+	{ id: 'fast', label: 'Rápido', hint: 'Páginas normales' },
+	{ id: 'balanced', label: 'Equilibrado', hint: 'Recomendado' },
+	{ id: 'math', label: 'Math', hint: 'Fórmulas / integrales' }
+]
+
+function readStoredProfile(): OcrProfile {
+	try {
+		const value = localStorage.getItem(OCR_PROFILE_KEY)
+		if (value === 'fast' || value === 'balanced' || value === 'math') return value
+	} catch {
+		/* ignore */
+	}
+	return 'balanced'
+}
 
 export type Layout = {
 	block_content: string
@@ -38,6 +63,8 @@ interface QueueItem {
 	progress?: number
 	currentStep?: string | null
 	executionSeconds?: number | null
+	/** epoch ms del started_at/created_at del backend (para cronómetro en vivo) */
+	startedAtMs?: number | null
 }
 
 interface FileUploadProps {
@@ -77,9 +104,12 @@ export function FileUpload({ onFileUploaded, onTaskStatusChange }: FileUploadPro
 	const [queue, setQueue] = useState<QueueItem[]>([])
 	const [isDragging, setIsDragging] = useState(false)
 	const [isLoading, setIsLoading] = useState(false)
+	const [ocrProfile, setOcrProfile] = useState<OcrProfile>(() => readStoredProfile())
+	const [nowMs, setNowMs] = useState(() => Date.now())
 	const fileInputRef = useRef<HTMLInputElement>(null)
 	const directoryInputRef = useRef<HTMLInputElement>(null)
 	const mountedRef = useRef(true)
+	const ocrProfileRef = useRef(ocrProfile)
 
 	useEffect(() => {
 		mountedRef.current = true
@@ -87,6 +117,33 @@ export function FileUpload({ onFileUploaded, onTaskStatusChange }: FileUploadPro
 			mountedRef.current = false
 		}
 	}, [])
+
+	useEffect(() => {
+		ocrProfileRef.current = ocrProfile
+		try {
+			localStorage.setItem(OCR_PROFILE_KEY, ocrProfile)
+		} catch {
+			/* ignore */
+		}
+	}, [ocrProfile])
+
+	const hasBusyItems = useMemo(
+		() =>
+			queue.some(
+				item =>
+					item.status === 'queued' ||
+					item.status === 'uploading' ||
+					item.status === 'pending' ||
+					item.status === 'processing'
+			),
+		[queue]
+	)
+
+	useEffect(() => {
+		if (!hasBusyItems) return
+		const id = window.setInterval(() => setNowMs(Date.now()), 1000)
+		return () => window.clearInterval(id)
+	}, [hasBusyItems])
 
 	const completedCount = useMemo(
 		() => queue.filter(item => item.status === 'completed').length,
@@ -104,7 +161,8 @@ export function FileUpload({ onFileUploaded, onTaskStatusChange }: FileUploadPro
 		error?: string | null,
 		progress?: number,
 		currentStep?: string | null,
-		executionSeconds?: number | null
+		executionSeconds?: number | null,
+		startedAtMs?: number | null
 	) => {
 		if (!mountedRef.current) return
 		setQueue(items =>
@@ -117,11 +175,29 @@ export function FileUpload({ onFileUploaded, onTaskStatusChange }: FileUploadPro
 							progress: progress ?? item.progress,
 							currentStep: currentStep ?? item.currentStep,
 							executionSeconds:
-								executionSeconds !== undefined ? executionSeconds : item.executionSeconds
+								executionSeconds !== undefined ? executionSeconds : item.executionSeconds,
+							startedAtMs: startedAtMs !== undefined ? startedAtMs : item.startedAtMs
 						}
 					: item
 			)
 		)
+	}
+
+	const liveSecondsFor = (item: QueueItem): number | null => {
+		if (item.status === 'completed' || item.status === 'failed') {
+			return item.executionSeconds ?? null
+		}
+		if (
+			item.status === 'processing' ||
+			item.status === 'pending' ||
+			item.status === 'uploading'
+		) {
+			if (item.startedAtMs != null) {
+				return Math.max(0, (nowMs - item.startedAtMs) / 1000)
+			}
+			return item.executionSeconds ?? null
+		}
+		return null
 	}
 
 	const pollTask = async (fileId: string, taskId: string | number) => {
@@ -141,12 +217,18 @@ export function FileUpload({ onFileUploaded, onTaskStatusChange }: FileUploadPro
 					response = await getTaskStatus(taskId)
 				}
 
-				const step = response.current_step ?? response.current_stage ?? null
-				const duration =
-					response.status === 'completed' || response.status === 'failed'
-						? getOcrDurationSeconds(response)
-						: null
-				updateQueueItem(fileId, response.status, null, response.progress, step, duration)
+				const step = formatStep(response.current_step ?? response.current_stage ?? null)
+				const startedAtMs = parseUtcMs(response.started_at || response.created_at)
+				const duration = getOcrDurationSeconds(response)
+				updateQueueItem(
+					fileId,
+					response.status,
+					null,
+					response.progress,
+					step,
+					duration,
+					startedAtMs
+				)
 				onTaskStatusChange?.({
 					fileId,
 					status: response.status,
@@ -156,11 +238,19 @@ export function FileUpload({ onFileUploaded, onTaskStatusChange }: FileUploadPro
 
 				if (response.status === 'completed' || response.status === 'failed') {
 					if (response.status === 'failed') {
-						updateQueueItem(fileId, 'failed', response.error_message, undefined, undefined, duration)
+						updateQueueItem(
+							fileId,
+							'failed',
+							response.error_message,
+							undefined,
+							undefined,
+							duration,
+							startedAtMs
+						)
 					}
 					return
 				}
-				await new Promise(resolve => setTimeout(resolve, 2000))
+				await new Promise(resolve => setTimeout(resolve, 1500))
 			} catch (error: any) {
 				consecutiveErrors += 1
 				const message = error.response?.data?.message || error.message || 'No se pudo consultar la tarea'
@@ -193,7 +283,10 @@ export function FileUpload({ onFileUploaded, onTaskStatusChange }: FileUploadPro
 	const processFile = async (uploadedFile: UploadedFile) => {
 		updateQueueItem(uploadedFile.id, 'uploading')
 		try {
-			const response = await uploadTask({ file: uploadedFile.file })
+			const response = await uploadTask({
+				file: uploadedFile.file,
+				ocr_profile: ocrProfileRef.current
+			})
 			const taskId = String(response.task_id)
 			if (!taskId) throw new Error('El servidor no devolvió un identificador de tarea')
 
@@ -284,6 +377,39 @@ export function FileUpload({ onFileUploaded, onTaskStatusChange }: FileUploadPro
 					<h2 className='text-lg font-semibold'>Procesamiento OCR</h2>
 					<ThemeToggle />
 				</div>
+
+				<div className='mb-3'>
+					<label className='block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1.5'>
+						Perfil de OCR
+					</label>
+					<div className='grid grid-cols-3 gap-1.5' role='radiogroup' aria-label='Perfil de OCR'>
+						{OCR_PROFILES.map(profile => {
+							const active = ocrProfile === profile.id
+							return (
+								<button
+									key={profile.id}
+									type='button'
+									role='radio'
+									aria-checked={active}
+									disabled={isLoading}
+									onClick={() => setOcrProfile(profile.id)}
+									className={cn(
+										'rounded-md border px-1.5 py-2 text-center transition-colors',
+										active
+											? 'border-primary bg-primary/10 text-foreground'
+											: 'border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-primary/50',
+										isLoading && 'opacity-60 cursor-not-allowed'
+									)}>
+									<span className='block text-xs font-semibold leading-tight'>{profile.label}</span>
+									<span className='block text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 leading-tight'>
+										{profile.hint}
+									</span>
+								</button>
+							)
+						})}
+					</div>
+				</div>
+
 				<div
 					className={cn(
 						'border-2 border-dashed rounded-lg py-6 px-4 text-center cursor-pointer transition-colors',
@@ -332,12 +458,27 @@ export function FileUpload({ onFileUploaded, onTaskStatusChange }: FileUploadPro
 								<div className='flex items-center gap-2 min-w-0'>
 									{item.status === 'completed' ? <CheckCircle2 className='size-4 text-green-600 dark:text-green-400 shrink-0' /> : item.status === 'failed' ? <XCircle className='size-4 text-red-600 dark:text-red-400 shrink-0' /> : <Loader2 className='size-4 text-primary shrink-0 animate-spin' />}
 									<span className='truncate flex-1' title={item.file.name}>{item.file.name}</span>
-									<span className='text-gray-500 dark:text-gray-400 shrink-0'>
-										{item.status === 'completed' && item.executionSeconds != null
-											? formatDuration(item.executionSeconds)
-											: item.status === 'processing' && typeof item.progress === 'number'
-												? `${Math.round(item.progress)}%`
-												: statusLabel[item.status]}
+									<span className='text-gray-500 dark:text-gray-400 shrink-0 tabular-nums'>
+										{(() => {
+											const live = liveSecondsFor(item)
+											if (item.status === 'completed' && live != null) {
+												return formatDuration(live)
+											}
+											if (
+												(item.status === 'processing' || item.status === 'pending') &&
+												live != null
+											) {
+												const pct =
+													typeof item.progress === 'number'
+														? `${Math.round(item.progress)}% · `
+														: ''
+												return `${pct}${formatDuration(live)}`
+											}
+											if (item.status === 'processing' && typeof item.progress === 'number') {
+												return `${Math.round(item.progress)}%`
+											}
+											return statusLabel[item.status]
+										})()}
 									</span>
 								</div>
 								{(item.status === 'processing' || item.status === 'pending') && (
@@ -349,7 +490,7 @@ export function FileUpload({ onFileUploaded, onTaskStatusChange }: FileUploadPro
 											/>
 										</div>
 										{item.currentStep && (
-											<p className='text-gray-500 mt-1 truncate' title={item.currentStep}>
+											<p className='text-gray-500 dark:text-gray-400 mt-1 truncate' title={item.currentStep}>
 												{item.currentStep}
 											</p>
 										)}

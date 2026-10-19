@@ -1,9 +1,6 @@
-# GLM-OCR — Ollama en GPU (recomendado en esta máquina)
-# Confirmado: glm-ocr corre al 100% GPU vía Ollama.
-# Alternativa vLLM (más throughput): scripts/start-vllm.ps1 + api_port 8080
-#
-# Optimizado para papers con fórmulas/integrales (prompt Formula Recognition,
-# crops ampliados, umbral más bajo en display/inline_formula, PNG).
+# GLM-OCR — Ollama en GPU (equilibrio velocidad / calidad)
+# Para papers matemáticos densos: config.math.yaml
+# Alternativa throughput: scripts/start-vllm.ps1 + api_port 8080
 
 server:
   host: "0.0.0.0"
@@ -20,21 +17,22 @@ pipeline:
     api_path: /api/generate
     model: glm-ocr:latest
     api_mode: ollama_generate
-    request_timeout: 1800
+    request_timeout: 600
 
-  # Concurrencia baja: evita saturar VRAM de 8 GB
-  max_workers: 2
+  # 3 workers: buen throughput en 8 GB sin saturar tanto como 4+
+  max_workers: 3
 
   page_loader:
-    max_tokens: 8192
+    # 8192 hacía cada región muy lenta en Ollama (num_predict).
+    # 2048 basta para párrafos normales; fórmulas largas suelen caber.
+    max_tokens: 2048
     temperature: 0.0
     top_p: 0.00001
     top_k: 1
     repetition_penalty: 1.1
-    # PNG preserva trazos finos de integrales/fracciones mejor que JPEG
-    image_format: PNG
-    pdf_dpi: 300
-    # Critico: sin esto Ollama usa "Text Recognition:" tambien en formulas
+    # JPEG: payload más pequeño y más rápido que PNG hacia Ollama
+    image_format: JPEG
+    pdf_dpi: 200
     task_prompt_mapping:
       text: "Text Recognition:"
       table: "Table Recognition:"
@@ -48,22 +46,18 @@ pipeline:
 
   layout:
     model_dir: PaddlePaddle/PP-DocLayoutV3_safetensors
-    # CUDA acelera el layout; en 8 GB VRAM deja la GPU libre para Ollama
+    # CPU deja la GPU a Ollama (recomendado con 8 GB)
     device: cpu
     batch_size: 1
     threshold: 0.3
-    # Detectar mas bloques de formula en paginas densas de math
     threshold_by_class:
-      # Umbral mas alto evita micro-detecciones que OCR-ean como "0.85"
       formula: 0.35
       formula_number: 0.25
-    # Expandir bbox (sobre todo en altura) para no cortar ∫, sumas, limites
     layout_unclip_ratio:
-      - 1.12
-      - 1.25
+      - 1.08
+      - 1.15
     layout_nms: true
     use_polygon: false
-    # Preservar formulas pequenas frente a paragrafos de texto grandes
     layout_merge_bboxes_mode: large
     label_task_mapping:
       text:
@@ -82,7 +76,6 @@ pipeline:
       table:
         - table
       formula:
-        # "formula" = etiqueta real del modelo safetensors actual
         - formula
         - display_formula
         - inline_formula

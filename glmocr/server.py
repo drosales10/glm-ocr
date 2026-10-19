@@ -5,6 +5,7 @@ import sys
 import time
 import traceback
 import uuid
+import threading
 import multiprocessing
 from typing import TYPE_CHECKING
 
@@ -20,6 +21,7 @@ except ImportError as e:  # pragma: no cover
 
 from glmocr.pipeline import Pipeline
 from glmocr.config import load_config
+from glmocr.profiles import apply_profile, list_profiles, normalize_profile
 from glmocr.utils.logging import get_logger, configure_logging
 
 if TYPE_CHECKING:
@@ -67,10 +69,17 @@ def create_app(config: "GlmOcrConfig") -> Flask:
 
     # Create pipeline with typed config
     pipeline = Pipeline(config=config.pipeline)
+    # Serialize profile overrides: PageLoader knobs are mutated per request.
+    profile_lock = threading.Lock()
 
     # Store pipeline and config in app.config
     app.config["pipeline"] = pipeline
     app.config["doc_config"] = config
+
+    @app.route("/glmocr/profiles", methods=["GET"])
+    def profiles():
+        """List available OCR speed/quality profiles for the UI."""
+        return jsonify({"profiles": list_profiles(), "default": "balanced"}), 200
 
     @app.route("/glmocr/parse", methods=["POST"])
     def parse():
@@ -79,6 +88,7 @@ def create_app(config: "GlmOcrConfig") -> Flask:
         Request:
             {
                 "images": ["url1", "url2", ...],  # image URLs (http/https/file/data)
+                "profile": "fast" | "balanced" | "math"  # optional
             }
 
         Response:
@@ -115,6 +125,8 @@ def create_app(config: "GlmOcrConfig") -> Flask:
         if not images:
             return jsonify({"error": "No images provided"}), 400
 
+        profile = normalize_profile(data.get("profile") or data.get("ocr_profile"))
+
         # Build pipeline request
         messages = [{"role": "user", "content": []}]
         for image_url in images:
@@ -125,27 +137,31 @@ def create_app(config: "GlmOcrConfig") -> Flask:
         request_data = {"messages": messages}
 
         try:
-            # Pipeline.process() yields one result per input unit; merge for single response
-            results = list(
-                pipeline.process(
-                    request_data,
-                    save_layout_visualization=False,
-                )
-            )
+            with profile_lock:
+                with apply_profile(pipeline.page_loader, profile) as active_profile:
+                    logger.info("Parse with profile=%s", active_profile)
+                    # Pipeline.process() yields one result per input unit
+                    results = list(
+                        pipeline.process(
+                            request_data,
+                            save_layout_visualization=False,
+                        )
+                    )
             if not results:
                 return jsonify(_build_response(None, "")), 200
             if len(results) == 1:
                 r = results[0]
-                return (
-                    jsonify(_build_response(r.json_result, r.markdown_result or "")),
-                    200,
-                )
+                resp = _build_response(r.json_result, r.markdown_result or "")
+                resp["profile"] = profile
+                return jsonify(resp), 200
             # Multiple units: merge json as list, markdown with separator
             json_result = [r.json_result for r in results]
             markdown_result = "\n\n---\n\n".join(
                 r.markdown_result or "" for r in results
             )
-            return jsonify(_build_response(json_result, markdown_result)), 200
+            resp = _build_response(json_result, markdown_result)
+            resp["profile"] = profile
+            return jsonify(resp), 200
 
         except Exception as e:
             logger.error("Parse error: %s", e)

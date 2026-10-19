@@ -21,6 +21,17 @@ from app.utils.config import settings
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 
+def _to_iso_utc(value: Optional[datetime]) -> Optional[str]:
+    """Serializa datetimes en ISO-8601 con Z (UTC) para el cronómetro del frontend."""
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=UTC)
+    else:
+        value = value.astimezone(UTC)
+    return value.isoformat().replace("+00:00", "Z")
+
+
 @router.post(
     "/upload",
     response_model=ApiResponse[TaskData],
@@ -30,7 +41,11 @@ async def submit_task(
     file: UploadFile = File(..., description="Archivo a procesar"),
     processing_mode: str = Form("pipeline"),
     priority: int = Form(2, description="1=baja,2=normal,3=alta,4=urgente"),
-    custom_url : str = Form(None, description=""),
+    custom_url: str = Form(None, description=""),
+    ocr_profile: str = Form(
+        "balanced",
+        description="Perfil OCR: fast | balanced | math",
+    ),
     output_format: str = Form("markdown"),
 ):
     """
@@ -39,6 +54,7 @@ async def submit_task(
     - **file**: Archivo subido
     - **processing_mode**: Modo de procesamiento; por defecto pipeline
     - **priority**: Prioridad (1=baja, 2=normal, 3=alta, 4=urgente)
+    - **ocr_profile**: Perfil de velocidad/calidad (fast, balanced, math)
     - **ocr_config**: Configuración OCR (cadena JSON, opcional)
     - **output_format**: Formato de salida; por defecto markdown
     - **retry_config**: Configuración de reintentos (cadena JSON, opcional)
@@ -48,10 +64,13 @@ async def submit_task(
         document_id = str(uuid.uuid4())
         task_id = str(uuid.uuid4())
 
-        parsed_ocr_config = None
-        # Parsear la configuración
-        if custom_url is not None :
-            parsed_ocr_config = {"custom_url":custom_url}
+        profile = (ocr_profile or "balanced").strip().lower()
+        if profile not in {"fast", "balanced", "math"}:
+            profile = "balanced"
+
+        parsed_ocr_config: dict = {"ocr_profile": profile}
+        if custom_url is not None:
+            parsed_ocr_config["custom_url"] = custom_url
 
         # Guardar el archivo
         save_dir = str(Path(settings.OUTPUT_DIR) / task_id)
@@ -213,9 +232,9 @@ async def get_task_status(task_id: str):
             "status": task_info.get("status"),
             "progress": task_info.get("progress"),
             "current_step": task_info.get("current_step"),
-            "created_at": task_info.get("created_at").isoformat() if task_info.get("created_at") else None,
-            "started_at": task_info.get("started_at").isoformat() if task_info.get("started_at") else None,
-            "completed_at": task_info.get("completed_at").isoformat() if task_info.get("completed_at") else None,
+            "created_at": _to_iso_utc(task_info.get("created_at")),
+            "started_at": _to_iso_utc(task_info.get("started_at")),
+            "completed_at": _to_iso_utc(task_info.get("completed_at")),
             "execution_time": task_info.get("execution_time"),
             "error_message": task_info.get("error_message"),
             "processing_mode": task_info.get("processing_mode"),

@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
     HOST: str = "0.0.0.0"
-    PORT: int = 8000
+    PORT: int = 8001
 
     # Configuración de la base de datos
     DATABASE_URL: str = "sqlite+aiosqlite:///./tasks.db"
@@ -24,7 +24,8 @@ class Settings(BaseSettings):
 
     # Configuración de Workers
     RUN_WORKERS: bool = True
-    WORKER_COUNT: int = 2
+    # Un solo worker: Ollama atiende un OCR a la vez en la GPU local.
+    WORKER_COUNT: int = 1
     WORKER_POLL_INTERVAL: int = 5  # segundos
     TASK_TIMEOUT: int = 3600  # segundos (1 hora)
 

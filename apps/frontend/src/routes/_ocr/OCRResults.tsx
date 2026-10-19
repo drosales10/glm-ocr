@@ -12,7 +12,8 @@ import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import rehypeRaw from 'rehype-raw'
 import 'katex/dist/katex.min.css'
-import { formatDuration, getOcrDurationSeconds } from '@/libs/utils'
+import { formatDuration, getOcrDurationSeconds, parseUtcMs } from '@/libs/utils'
+import { formatStep } from '@/libs/api'
 
 interface OCRResultsProps {
 	result: TaskResponse | null
@@ -89,13 +90,11 @@ export function OCRResults({ result, fileName }: OCRResultsProps) {
 	const durationSeconds = useMemo(() => {
 		if (!response) return null
 		if (isDone || status === 'failed') {
-			return getOcrDurationSeconds(response)
+			return getOcrDurationSeconds(response, nowMs)
 		}
 		if (isBusy) {
-			const startRaw = response.started_at || response.created_at
-			if (!startRaw) return null
-			const start = Date.parse(startRaw)
-			if (!Number.isFinite(start)) return null
+			const start = parseUtcMs(response.started_at || response.created_at)
+			if (start == null) return null
 			return Math.max(0, (nowMs - start) / 1000)
 		}
 		return null
@@ -187,9 +186,9 @@ export function OCRResults({ result, fileName }: OCRResultsProps) {
 											Tiempo: {durationLabel}
 										</p>
 									)}
-									{(response?.current_step || response?.current_stage) && (
+									{formatStep(response?.current_step || response?.current_stage) && (
 										<p className='text-xs text-gray-400 dark:text-gray-500 mt-2'>
-											{response.current_step || response.current_stage}
+											{formatStep(response?.current_step || response?.current_stage)}
 										</p>
 									)}
 								</div>

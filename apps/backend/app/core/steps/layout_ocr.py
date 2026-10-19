@@ -3,7 +3,8 @@ Paso de análisis de diseño y procesamiento OCR
 """
 
 import json
-from typing import Dict, Any, Optional, Callable, List, Union
+import asyncio
+from typing import Dict, Any, Optional, Callable, List, Union, Awaitable
 from pathlib import Path
 from app.core.ocr_client import LayoutAndOCRClient
 import httpx
@@ -13,6 +14,31 @@ from app.core.flows.base import ProcessingContext
 from app.utils.config import settings
 from app.utils.image_processer import crop_image_by_bbox_to_path, vlm_bbox_convert
 from app.utils.logger import logger
+
+
+async def _ocr_with_progress_heartbeat(
+    coro: Awaitable[Any],
+    progress_callback: Optional[Callable[[float, str], Awaitable[None]]],
+    start_pct: float,
+    end_pct: float,
+    message: str,
+) -> Any:
+    """Ejecuta el OCR y publica progreso intermedio (evita quedarse congelado en 20%)."""
+    if progress_callback:
+        await progress_callback(start_pct, message)
+
+    task = asyncio.create_task(coro)
+    pct = start_pct
+    # Acercamiento asintótico a end_pct mientras espera la respuesta del pipeline
+    while not task.done():
+        try:
+            await asyncio.wait_for(asyncio.shield(task), timeout=2.0)
+        except asyncio.TimeoutError:
+            span = max(0.0, end_pct - start_pct)
+            pct = min(end_pct - 0.5, pct + max(0.8, span * 0.06))
+            if progress_callback:
+                await progress_callback(pct, message)
+    return await task
 
 
 class LayoutOcrStepInput:
@@ -108,9 +134,13 @@ async def _call_ocr_service(
         progress_callback: Callback de progreso
     """
 
+    safe_page_count = max(page_count or len(image_files) or 1, 1)
     if progress_callback:
-        await progress_callback(0.0, f"Initializing OCR service for {page_count} pages")
+        await progress_callback(
+            1.0, f"Inicializando OCR ({safe_page_count} página(s))"
+        )
     custom_url = config.get("custom_url", None)
+    ocr_profile = config.get("ocr_profile") or "balanced"
     cli = LayoutAndOCRClient()
     pages_result = []
     page_width = page_size.get("width")
@@ -119,11 +149,22 @@ async def _call_ocr_service(
     ref_image_paths = []
     for i, image_file in enumerate(image_files):
         page_num = i + 1
-        result = await cli.process_single_image(image_file, custom_url=custom_url)
+        start_pct = (i / safe_page_count) * 100.0
+        # Deja margen antes del 100% de la página para el post-proceso local
+        end_pct = ((i + 0.92) / safe_page_count) * 100.0
+        result = await _ocr_with_progress_heartbeat(
+            cli.process_single_image(
+                image_file, custom_url=custom_url, profile=ocr_profile
+            ),
+            progress_callback,
+            start_pct=max(2.0, start_pct),
+            end_pct=end_pct,
+            message=f"Reconociendo página {page_num}/{safe_page_count}",
+        )
         if progress_callback:
-            progress = (i / page_count) * 100
             await progress_callback(
-                progress, f"Processing page {page_num}/{page_count}"
+                ((i + 1) / safe_page_count) * 100.0,
+                f"Página {page_num}/{safe_page_count} reconocida",
             )
         page_blocks = []
         for idx, block in enumerate(result):

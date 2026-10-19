@@ -115,12 +115,14 @@ class LayoutAndOCRClient:
 
     def _create_multi_image_payload(
         self,
-        image_paths: List[str]
+        image_paths: List[str],
+        profile: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Crea la carga útil de la solicitud para reconocimiento de varias imágenes.
 
         Args:
             image_paths: Lista de rutas de archivos de imagen
+            profile: Perfil OCR (fast | balanced | math)
 
         Returns:
             Diccionario de la carga útil de la solicitud
@@ -134,7 +136,10 @@ class LayoutAndOCRClient:
             image_base64 = self._encode_image_to_base64(image_path)
             image_base64_list.append(image_base64)
 
-        return {"images": image_base64_list}
+        payload: Dict[str, Any] = {"images": image_base64_list}
+        if profile:
+            payload["profile"] = profile
+        return payload
 
     def _create_single_image_payload(
         self,
@@ -155,6 +160,7 @@ class LayoutAndOCRClient:
         image_paths: Union[str, List[str]],
         prompt: Optional[str] = None,
         custom_url: Optional[str] = None,
+        profile: Optional[str] = None,
     ) -> List[List[Dict[str, Any]]]:
         """Procesa una o varias imágenes y devuelve resultados de layout y OCR.
 
@@ -162,6 +168,7 @@ class LayoutAndOCRClient:
             image_paths: Ruta de una imagen o lista de rutas de imágenes
             prompt: Prompt personalizado
             custom_url: URL personalizada del servicio; sustituye la URL de inicialización
+            profile: Perfil OCR (fast | balanced | math)
 
         Returns:
             Lista de resultados de reconocimiento; cada elemento corresponde a una imagen:
@@ -188,11 +195,12 @@ class LayoutAndOCRClient:
             image_paths = [image_paths]
 
         logger.info(
-            f"Processing {len(image_paths)} images with layout and OCR,url is:{url}"
+            f"Processing {len(image_paths)} images with layout and OCR,"
+            f" url={url}, profile={profile or 'balanced'}"
         )
 
         # Crear la carga útil de la solicitud
-        payload = self._create_multi_image_payload(image_paths)
+        payload = self._create_multi_image_payload(image_paths, profile=profile)
 
         try:
             async with httpx.AsyncClient(
@@ -290,6 +298,7 @@ class LayoutAndOCRClient:
         image_path: str,
         prompt: Optional[str] = None,
         custom_url: Optional[str] = None,
+        profile: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """Procesa una sola imagen y devuelve resultados de layout y OCR.
 
@@ -297,9 +306,12 @@ class LayoutAndOCRClient:
             image_path: Ruta del archivo de imagen
             prompt: Prompt personalizado
             custom_url: URL personalizada del servicio
+            profile: Perfil OCR (fast | balanced | math)
 
         Returns:
             Lista de resultados de reconocimiento de una sola imagen
         """
-        results = await self.process_images(image_path, prompt, custom_url)
+        results = await self.process_images(
+            image_path, prompt, custom_url, profile=profile
+        )
         return results[0] if results else []

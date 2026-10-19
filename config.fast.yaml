@@ -1,0 +1,87 @@
+# GLM-OCR — perfil rápido (páginas normales, menos énfasis en math denso)
+# Uso: .\scripts\start-app.ps1 -Config config.fast.yaml -ForceRestart -SkipOllama
+
+server:
+  host: "0.0.0.0"
+  port: 5002
+  debug: false
+
+pipeline:
+  maas:
+    enabled: false
+
+  ocr_api:
+    api_host: localhost
+    api_port: 11434
+    api_path: /api/generate
+    model: glm-ocr:latest
+    api_mode: ollama_generate
+    request_timeout: 300
+
+  max_workers: 4
+
+  page_loader:
+    max_tokens: 1024
+    temperature: 0.0
+    top_p: 0.00001
+    top_k: 1
+    repetition_penalty: 1.1
+    image_format: JPEG
+    pdf_dpi: 150
+    task_prompt_mapping:
+      text: "Text Recognition:"
+      table: "Table Recognition:"
+      formula: "Formula Recognition:"
+
+  result_formatter:
+    output_format: both
+    enable_merge_formula_numbers: true
+    enable_merge_text_blocks: true
+    enable_format_bullet_points: true
+
+  layout:
+    model_dir: PaddlePaddle/PP-DocLayoutV3_safetensors
+    device: cpu
+    batch_size: 1
+    threshold: 0.35
+    threshold_by_class:
+      formula: 0.4
+      formula_number: 0.3
+    layout_unclip_ratio:
+      - 1.05
+      - 1.1
+    layout_nms: true
+    use_polygon: false
+    layout_merge_bboxes_mode: large
+    label_task_mapping:
+      text:
+        - abstract
+        - algorithm
+        - content
+        - doc_title
+        - figure_title
+        - paragraph_title
+        - reference_content
+        - text
+        - vertical_text
+        - vision_footnote
+        - seal
+        - formula_number
+      table:
+        - table
+      formula:
+        - formula
+        - display_formula
+        - inline_formula
+      skip:
+        - chart
+        - image
+      abandon:
+        - header
+        - footer
+        - number
+        - footnote
+        - aside_text
+        - reference
+        - footer_image
+        - header_image

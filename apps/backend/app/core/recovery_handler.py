@@ -30,11 +30,16 @@ class RecoveryHandler:
         }
 
         try:
-            # Recupera tareas con bloqueo expirado
-            expired_count = await self._recover_expired_locks()
-            stats["expired_locks_recovered"] = expired_count
-
-            stats["total_checked"] = expired_count
+            # Al arrancar no hay workers vivos: toda tarea en proceso quedó huérfana.
+            processing = await self.task_repo.get_processing_tasks()
+            stats["total_checked"] = len(processing)
+            for task in processing:
+                try:
+                    await self._recover_single_task(task, reason="proceso reiniciado")
+                    stats["expired_locks_recovered"] += 1
+                except Exception as e:
+                    logger.error(f"Failed to recover task {task.task_id}: {e}")
+                    stats["failed_recoveries"] += 1
 
             logger.info(f"Task recovery completed: {stats}")
             return stats

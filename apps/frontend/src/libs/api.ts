@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001/api/v1'
 
 // Subida: timeout moderado. El OCR en sí es asíncrono (cola de tareas).
 const api = axios.create({
@@ -52,9 +52,13 @@ export interface UploadTaskData {
 
 export interface UploadTaskResponse extends ApiResponse<UploadTaskData> {}
 
+export type OcrProfile = 'fast' | 'balanced' | 'math'
+
 export interface UploadTaskParams {
 	file: File
 	custom_url?: string
+	/** Perfil de velocidad/calidad enviado al pipeline glmocr. */
+	ocr_profile?: OcrProfile
 }
 
 export type TaskStatus = 'pending' | 'processing' | 'completed' | 'failed'
@@ -114,6 +118,7 @@ export async function uploadTask(params: UploadTaskParams): Promise<UploadTaskDa
 	const formData = new FormData()
 	formData.append('file', params.file)
 	formData.append('processing_mode', 'pipeline')
+	formData.append('ocr_profile', params.ocr_profile || 'balanced')
 	if (params.custom_url) {
 		formData.append('custom_url', params.custom_url)
 	}
@@ -125,6 +130,17 @@ export async function uploadTask(params: UploadTaskParams): Promise<UploadTaskDa
 	}
 
 	return response.data.data
+}
+
+const STEP_LABELS: Record<string, string> = {
+	pdf_to_image: 'Preparando la imagen',
+	layout_and_ocr: 'Reconociendo el texto',
+	result_merge: 'Uniendo el resultado'
+}
+
+export function formatStep(step?: string | null): string | null {
+	if (!step) return null
+	return STEP_LABELS[step] ?? step
 }
 
 export async function getTaskStatus(taskId: string | number): Promise<TaskStatusData> {

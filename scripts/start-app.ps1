@@ -5,7 +5,7 @@
 # Uso (desde la raiz del repo):
 #   .\scripts\start-app.ps1
 #   .\scripts\start-app.ps1 -SkipOllama
-#   .\scripts\start-app.ps1 -ForceRestart   # mata procesos en 5002/8000/3006 y relanza
+#   .\scripts\start-app.ps1 -ForceRestart   # mata procesos en 5002/8001/3006 y relanza
 #   .\scripts\start-app.ps1 -Config config.ollama.yaml
 #   .\scripts\start-app.ps1 -NoBrowser
 
@@ -25,7 +25,7 @@ $ConfigPath = Join-Path $ProjectRoot $Config
 $VenvPython = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
 $FrontendUrl = "http://localhost:3006"
 $PipelineHealth = "http://127.0.0.1:5002/health"
-$BackendDocs = "http://127.0.0.1:8000/docs"
+$BackendDocs = "http://127.0.0.1:8001/docs"
 
 $ToolDirs = @(
     (Join-Path $env:LOCALAPPDATA "Programs\Ollama"),
@@ -151,8 +151,8 @@ Write-Host "Raiz: $ProjectRoot"
 Write-Host ""
 
 if ($ForceRestart) {
-    Write-Host "ForceRestart: liberando puertos 5002/8000/3006 ..." -ForegroundColor Yellow
-    Stop-PortListeners -Ports @(5002, 8000, 3006)
+    Write-Host "ForceRestart: liberando puertos 5002/8001/3006 ..." -ForegroundColor Yellow
+    Stop-PortListeners -Ports @(5002, 8001, 3006)
 }
 
 # --- 1) Ollama (:11434) ---
@@ -194,21 +194,22 @@ if (-not (Test-PortInUse -Port 5002)) {
         -Command $PipelineCmd
 }
 
-# --- 3) Backend uvicorn (:8000) ---
+# --- 3) Backend uvicorn (:8001) ---
+# El 8000 lo usa bosquesdevenezuela (Laravel). No ocupar ese puerto.
 if (-not (Test-Path $BackendDir)) {
     Write-Error "No existe apps\backend: $BackendDir"
 }
 if (-not $UvExe) {
     Write-Error "No se encontro 'uv'. Ruta esperada: $env:USERPROFILE\.local\bin\uv.exe"
 }
-if (-not (Test-PortInUse -Port 8000)) {
+if (-not (Test-PortInUse -Port 8001)) {
     Start-ServiceWindow `
-        -Title "GLM-OCR Backend :8000" `
+        -Title "GLM-OCR Backend :8001" `
         -WorkingDirectory $BackendDir `
-        -Command "& '$UvExe' run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
+        -Command "& '$UvExe' run python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8001"
 }
 else {
-    Write-Host "Backend ya escucha en :8000." -ForegroundColor Yellow
+    Write-Host "Backend ya escucha en :8001." -ForegroundColor Yellow
 }
 
 Write-Host ""

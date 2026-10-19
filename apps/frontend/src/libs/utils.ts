@@ -21,24 +21,35 @@ export function formatDuration(seconds: number): string {
   return `${secs} s`
 }
 
+/** Parsea timestamps del backend; si no traen zona, se asumen UTC. */
+export function parseUtcMs(raw?: string | null): number | null {
+  if (!raw) return null
+  const trimmed = String(raw).trim()
+  if (!trimmed) return null
+  const hasTz = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(trimmed)
+  const normalized = hasTz
+    ? trimmed
+    : `${trimmed.replace(' ', 'T')}${trimmed.includes('T') || trimmed.includes(' ') ? 'Z' : ''}`
+  const ms = Date.parse(normalized.includes('T') ? normalized : trimmed)
+  return Number.isFinite(ms) ? ms : null
+}
+
 /** Duración OCR en segundos a partir de execution_time o timestamps. */
 export function getOcrDurationSeconds(data: {
   execution_time?: number | null
   started_at?: string | null
   completed_at?: string | null
   created_at?: string | null
-}): number | null {
-  if (typeof data.execution_time === 'number' && Number.isFinite(data.execution_time) && data.execution_time >= 0) {
+}, nowMs: number = Date.now()): number | null {
+  if (typeof data.execution_time === 'number' && Number.isFinite(data.execution_time) && data.execution_time > 0) {
     return data.execution_time
   }
 
-  const startRaw = data.started_at || data.created_at
-  const endRaw = data.completed_at
-  if (!startRaw || !endRaw) return null
+  const start = parseUtcMs(data.started_at || data.created_at)
+  if (start == null) return null
 
-  const start = Date.parse(startRaw)
-  const end = Date.parse(endRaw)
-  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return null
+  const end = parseUtcMs(data.completed_at) ?? nowMs
+  if (end < start) return 0
   return (end - start) / 1000
 }
 

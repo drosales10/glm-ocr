@@ -55,7 +55,7 @@ start_backend() {
 
     # 启动 backend
     echo -e "${GREEN}启动 Backend 服务...${NC}"
-    uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload &
+    uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload &
     BACKEND_PID=$!
     echo $BACKEND_PID > "$SCRIPT_DIR/.backend.pid"
     echo -e "${GREEN}✓ Backend 已启动 (PID: $BACKEND_PID)${NC}"
@@ -88,8 +88,8 @@ echo -e "\n${BLUE}========================================${NC}"
 echo -e "${GREEN}✓ 所有服务已成功启动！${NC}"
 echo -e "${BLUE}========================================${NC}"
 echo -e "${YELLOW}Frontend:${NC} http://localhost:5173"
-echo -e "${YELLOW}Backend:${NC}  http://localhost:8000"
-echo -e "${YELLOW}API Docs:${NC} http://localhost:8000/docs"
+echo -e "${YELLOW}Backend:${NC}  http://localhost:8001"
+echo -e "${YELLOW}API Docs:${NC} http://localhost:8001/docs"
 echo -e "\n${YELLOW}进程 ID 已保存到：${NC}"
 echo -e "  Backend:  $SCRIPT_DIR/.backend.pid"
 echo -e "  Frontend: $SCRIPT_DIR/.frontend.pid"

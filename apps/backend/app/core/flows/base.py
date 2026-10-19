@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.task import Task
 from app.repository.task import TaskRepository
 from app.models.task import TaskStatus
+from app.utils.logger import logger
 
 
 @dataclass
@@ -87,12 +88,12 @@ class ProcessingContext:
         try:
             task_repo = TaskRepository(self.db_session)
             await task_repo.update_task_progress(
-                task_id=self.task_id, progress=progress, current_stage=current_step
+                task_id=self.task_id, progress=progress, current_step=current_step
             )
             await self.db_session.commit()
         except Exception as e:
             # Un fallo al actualizar el progreso no debe afectar el flujo principal
-            pass
+            logger.warning(f"No se pudo guardar el progreso de {self.task_id}: {e}")
 
 
 class TaskProcessingFlow(ABC):

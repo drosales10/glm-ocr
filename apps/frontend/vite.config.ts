@@ -29,7 +29,7 @@ export default defineConfig({
     // Proxy de peticiones al backend para evitar problemas de CORS y conexión
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8000',
+        target: 'http://127.0.0.1:8001',
         changeOrigin: true,
         // No reescribir la ruta; mantener /api/v1/...
         rewrite: (path) => path,

@@ -1,8 +1,8 @@
-# Falsos positivos en español frente al diccionario EN de typos.
-# Clave = valor → ortografía válida (no corregir).
+# Falsos positivos en espanol frente al diccionario EN de typos.
+# Clave = valor -> ortografia valida (no corregir).
 
 [default.extend-words]
-# Ambiguos (múltiples correcciones EN)
+# Ambiguos (multiples correcciones EN)
 cliente = "cliente"
 responde = "responde"
 inicial = "inicial"
@@ -20,4 +20,25 @@ componentes = "componentes"
 extensiones = "extensiones"
 argumentos = "argumentos"
 comandos = "comandos"
+comando = "comando"
 ser = "ser"
+normales = "normales"
+mata = "mata"
+rapido = "rapido"
+paginas = "paginas"
+formulas = "formulas"
+equilibrado = "equilibrado"
+arranque = "arranque"
+detiene = "detiene"
+escucha = "escucha"
+ventana = "ventana"
+puerto = "puerto"
+procesos = "procesos"
+relanza = "relanza"
+perfil = "perfil"
+densas = "densas"
+menor = "menor"
+calidad = "calidad"
+bastante = "bastante"
+suelen = "suelen"
+caber = "caber"

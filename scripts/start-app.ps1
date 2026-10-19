@@ -5,7 +5,7 @@
 # Uso (desde la raiz del repo):
 #   .\scripts\start-app.ps1
 #   .\scripts\start-app.ps1 -SkipOllama
-#   .\scripts\start-app.ps1 -ForceRestart   # mata procesos en 5002/8001/3006 y relanza
+#   .\scripts\start-app.ps1 -ForceRestart   # cierra procesos en 5002/8001/3006 y relanza
 #   .\scripts\start-app.ps1 -Config config.ollama.yaml
 #   .\scripts\start-app.ps1 -NoBrowser
 

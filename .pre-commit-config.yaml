@@ -31,5 +31,5 @@ repos:
   - repo: https://github.com/crate-ci/typos
     rev: v1.44.0
     hooks:
+      # Sin --write-changes: evita "correcciones" EN que rompen texto en espanol.
       - id: typos
-        args: ["--write-changes"]
